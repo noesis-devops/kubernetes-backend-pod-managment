@@ -40,3 +40,5 @@ jobs:
     environment: DEV
     steps:
       - name: deploy
+        run: |
+          echo Deploy DEV!
