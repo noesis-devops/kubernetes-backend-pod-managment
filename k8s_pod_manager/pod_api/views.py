@@ -21,14 +21,11 @@ class PodCreateView(APIView):
         config.load_kube_config()
 
         # Parse request data
-        #namespace = request.data.get('namespace')
-        #pod_name = request.data.get('pod_name')
-        #container_name = request.data.get('container_name')
-        #image = request.data.get('image')
-        namespace = 'default'
-        pod_name = 'sample-pod'
-        container_name = 'container-name'
-        image = 'nginx:latest'
+        namespace = request.data.get('namespace')
+        pod_name = request.data.get('pod_name')
+        container_name = request.data.get('container_name')
+        image = request.data.get('image')
+        
         # Create Kubernetes API client
         v1 = client.CoreV1Api()
 
