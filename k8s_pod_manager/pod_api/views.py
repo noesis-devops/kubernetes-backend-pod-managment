@@ -8,6 +8,17 @@ from kubernetes import client, config
 
 config.load_kube_config()
 
+class PodManagement:
+
+    def get_pods_in_namespace(self, namespace):
+        try:
+            api_response = self.v1.list_namespaced_pod(namespace)
+            pod_list = [pod.metadata.name for pod in api_response.items]
+            return pod_list
+        except client.rest.ApiException as e:
+            return None  # Return an appropriate error response or raise an exception
+Here's how you might use this method:
+
 class PodListView(APIView):
     def get(self, request):
         v1 = client.CoreV1Api()
@@ -24,6 +35,16 @@ class PodListView(APIView):
             pod_data.append({namespace_name: pod_list})
 
         return Response({"pod_data": pod_data})
+
+class PodsInNamespaceView(APIView):
+    def get(self, request, namespace):
+        pod_manager = PodManagement()
+        pods = pod_manager.get_pods_in_namespace(namespace)
+
+        if pods is not None:
+            return Response({'pods': pods})
+        else:
+            return Response({'message': f'Error fetching pods in namespace {namespace}'}, status=400)
 
 class PodCreateView(APIView):
     def post(self, request):
