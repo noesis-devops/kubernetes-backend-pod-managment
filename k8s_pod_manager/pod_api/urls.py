@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import PodListView, PodCreateView
+from .views import PodListView, PodCreateView, PodDeleteView
 
 urlpatterns = [
     path('pods/', PodListView.as_view(), name='pod-list'),
