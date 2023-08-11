@@ -6,7 +6,8 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from kubernetes import client, config
 
-config.load_kube_config()
+config.load_incluster_config()
+
 
 class PodManagement:
 
