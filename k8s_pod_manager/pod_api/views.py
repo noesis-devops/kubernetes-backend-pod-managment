@@ -50,6 +50,20 @@ class PodCreateView(APIView):
         # Create the pod
         try:
             resp = v1.create_namespaced_pod(namespace, pod_manifest)
-            return Response({'message': 'Pod created successfully', 'pod_name': resp.metadata.name})
+            return Response({'message': 'Pod created successfully', 'pod_name': resp.metadata.name, 'namespace': resp.metadata.namespace})
         except Exception as e:
             return Response({'message': f'Error creating pod: {str(e)}'}, status=400)
+
+class PodDeleteView(APIView):
+    def delete(self, request, namespace, pod_name):
+        # Load Kubernetes configuration
+        config.load_kube_config()
+
+        # Create Kubernetes API client
+        v1 = client.CoreV1Api()
+        # Delete the pod
+        try:
+            v1.delete_namespaced_pod(pod_name, namespace)
+            return Response({'message': 'Pod deleted successfully'})
+        except client.rest.ApiException as e:
+            return Response({'message': f'Error deleting pod: {str(e)}'}, status=400)
