@@ -11,9 +11,19 @@ config.load_kube_config()
 class PodListView(APIView):
     def get(self, request):
         v1 = client.CoreV1Api()
-        pods = v1.list_pod_for_all_namespaces().items
-        pod_list = [pod.metadata.name for pod in pods]
-        return Response({'pods': pod_list})
+        namespaces = v1.list_namespace().items
+
+        pod_data = []
+
+        # Iterate through namespaces and pods
+        for namespace in namespaces:
+            namespace_name = namespace.metadata.name
+            pods = v1.list_namespaced_pod(namespace_name).items
+
+            pod_list = [pod.metadata.name for pod in pods]
+            pod_data.append({namespace_name: pod_list})
+
+        return Response({"pod_data": pod_data})
 
 class PodCreateView(APIView):
     def post(self, request):
