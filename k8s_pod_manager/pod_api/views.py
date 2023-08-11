@@ -17,7 +17,6 @@ class PodManagement:
             return pod_list
         except client.rest.ApiException as e:
             return None  # Return an appropriate error response or raise an exception
-Here's how you might use this method:
 
 class PodListView(APIView):
     def get(self, request):
