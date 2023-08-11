@@ -16,7 +16,7 @@ class PodListView(APIView):
         return Response({'pods': pod_list})
 
 class PodCreateView(APIView):
-    def get(self, request):
+    def post(self, request):
         # Load Kubernetes configuration
         config.load_kube_config()
 
