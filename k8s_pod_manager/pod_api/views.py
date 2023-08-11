@@ -12,7 +12,8 @@ class PodManagement:
 
     def get_pods_in_namespace(self, namespace):
         try:
-            api_response = self.v1.list_namespaced_pod(namespace)
+            v1 = client.CoreV1Api()
+            api_response = v1.list_namespaced_pod(namespace)
             pod_list = [pod.metadata.name for pod in api_response.items]
             return pod_list
         except client.rest.ApiException as e:
