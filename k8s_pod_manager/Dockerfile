@@ -1,6 +1,7 @@
 # Use a base image
 FROM python:3.9
 
+#USER root
 # Set environment variables
 ENV PYTHONUNBUFFERED 1
 
@@ -16,6 +17,11 @@ COPY . /app/
 
 # Expose the port the application runs on
 EXPOSE 8000
+#RUN mkdir /root/.kube
+#RUN ls -la /root
+#COPY ./config /root/.kube/
+#RUN cat /root/.kube/config
+
 
 # Command to run the application
 CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]

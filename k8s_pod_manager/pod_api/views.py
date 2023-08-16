@@ -8,7 +8,6 @@ from kubernetes import client, config
 
 config.load_incluster_config()
 
-
 class PodManagement:
 
     def get_pods_in_namespace(self, namespace):
@@ -50,7 +49,8 @@ class PodsInNamespaceView(APIView):
 class PodCreateView(APIView):
     def post(self, request):
         # Load Kubernetes configuration
-        config.load_kube_config()
+        config.load_incluster_config()
+
 
         # Parse request data
         namespace = request.data.get('namespace')
@@ -85,8 +85,7 @@ class PodCreateView(APIView):
 
 class PodDeleteView(APIView):
     def delete(self, request, namespace, pod_name):
-        # Load Kubernetes configuration
-        config.load_kube_config()
+        config.load_incluster_config()
 
         # Create Kubernetes API client
         v1 = client.CoreV1Api()
