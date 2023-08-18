@@ -92,6 +92,29 @@ class PodCreateView(APIView):
         
         api_instance = client.AppsV1Api()
         service_api_instance = client.CoreV1Api()
+        
+        for port in range(start_port, end_port):
+            custom_variables["port"] = port
+            template_path = Path(__file__).with_name('selenium_hub_service_template.yaml')
+            rendered_selenium_hub_service_template = self.substitute_tokens_in_yaml(template_path, custom_variables)
+            print(rendered_selenium_hub_service_template)
+            try:
+                service_api_response = service_api_instance.create_namespaced_service(namespace=namespace, body=yaml.safe_load(rendered_selenium_hub_service_template))
+                print(service_api_response)
+                break  # If service creation succeeds, exit the loop
+            except client.exceptions.ApiException as e:
+                if e.status == 409 and e.reason == "AlreadyExists":
+                    print(f"Port {port} already allocated.")
+                else:
+                    print("An error occurred:", e)
+                               
+
+        template_path = Path(__file__).with_name('node_chrome_service_template.yaml')
+        rendered_node_chrome_service_template = self.substitute_tokens_in_yaml(template_path, custom_variables)
+        print(rendered_node_chrome_service_template)
+        service_api_response = service_api_instance.create_namespaced_service(namespace=namespace, body=yaml.safe_load(rendered_node_chrome_service_template))
+        print(service_api_response)
+        
         try:
             template_path = Path(__file__).with_name('selenium_hub_deployment_template.yaml')
             rendered_selenium_hub_deployment_template = self.substitute_tokens_in_yaml(template_path, custom_variables)
@@ -117,36 +140,8 @@ class PodCreateView(APIView):
                 print("Deployment already exists.")
             else:
                 print("An error occurred:", e)
-
-        
-        for port in range(start_port, end_port):
-            custom_variables["port"] = port
-            template_path = Path(__file__).with_name('selenium_hub_service_template.yaml')
-            rendered_selenium_hub_service_template = self.substitute_tokens_in_yaml(template_path, custom_variables)
-            print(rendered_selenium_hub_service_template)
-            try:
-                service_api_response = service_api_instance.create_namespaced_service(namespace=namespace, body=yaml.safe_load(rendered_selenium_hub_service_template))
-                print(service_api_response)
-                break  # If service creation succeeds, exit the loop
-            except client.exceptions.ApiException as e:
-                if e.status == 409 and e.reason == "AlreadyExists":
-                    print(f"Port {port} already allocated.")
-                else:
-                    print("An error occurred:", e)
-                               
-
-        template_path = Path(__file__).with_name('node_chrome_service_template.yaml')
-        rendered_node_chrome_service_template = self.substitute_tokens_in_yaml(template_path, custom_variables)
-        print(rendered_node_chrome_service_template)
-        service_api_response = service_api_instance.create_namespaced_service(namespace=namespace, body=yaml.safe_load(rendered_node_chrome_service_template))
-        print(service_api_response)
             
-        try:
-            
-            return Response({'message': f'selenium and chrome {custom_variables["port"]} created successfully', 'pod_name': resp.metadata.name, 'namespace': resp.metadata.namespace, 'port': custom_variables['port']})
-        except Exception as e:
-            return Response({'message': f'Error creating deployment or service: {str(e)}'}, status=400)
-
+        return Response({'message': f'selenium and chrome {custom_variables["port"]} created successfully', 'pod_name': resp.metadata.name, 'namespace': resp.metadata.namespace, 'port': custom_variables['port']})
         
     
         
