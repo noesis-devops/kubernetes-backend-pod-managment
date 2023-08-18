@@ -97,6 +97,7 @@ class PodCreateView(APIView):
         rendered_selenium_hub_deployment_template = self.substitute_tokens_in_yaml(template_path, custom_variables)
         print(rendered_selenium_hub_deployment_template)
         api_response = api_instance.create_namespaced_deployment(namespace, yaml.safe_load(rendered_selenium_hub_deployment_template))
+        print("api_response rendered_selenium_hub_deployment_template")
         print(api_response)
         
         template_path = Path(__file__).with_name('node_chrome_deployment_template.yaml')
