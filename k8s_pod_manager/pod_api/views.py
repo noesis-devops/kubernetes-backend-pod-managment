@@ -166,14 +166,18 @@ class PodCreateView(APIView):
         
 
 class PodDeleteView(APIView):
-    def delete(self, request, namespace, pod_name):
+    def delete(self, request):
         config.load_kube_config()
 
         # Create Kubernetes API client
         v1 = client.CoreV1Api()
-        # Delete the pod
+        # Delete deployments and services
         try:
-            v1.delete_namespaced_pod(pod_name, namespace)
-            return Response({'message': 'Pod deleted successfully'})
+            for namespace in request.data:
+                for deployment in request.data[namespace]["deployments"]:
+                    v1.delete_namespaced_deployment(deployment_name, namespace)
+                for service in request.data[namespace]["services"]:
+                    v1.delete_namespaced_service(service_name, namespace)
+            return Response({'Deleted': request.data})
         except client.rest.ApiException as e:
-            return Response({'message': f'Error deleting pod: {str(e)}'}, status=400)
+            return Response({'message': f'Error deleting: {str(e)}'}, status=400)
