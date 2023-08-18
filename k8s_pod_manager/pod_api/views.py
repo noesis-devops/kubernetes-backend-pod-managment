@@ -131,7 +131,7 @@ class PodCreateView(APIView):
             api_response = api_instance.create_namespaced_deployment(namespace, yaml.safe_load(rendered_selenium_hub_deployment_template))
             print("api_response rendered_selenium_hub_deployment_template")
             print(api_response)
-            resp[namespace]["deployments"].append(service_api_response.metadata.name)
+            resp[namespace]["deployments"].append(api_response.metadata.name)
             succeeds = True
         except client.exceptions.ApiException as e:
             succeeds = False
