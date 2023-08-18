@@ -97,6 +97,7 @@ class PodCreateView(APIView):
             rendered_selenium_hub_deployment_template = self.substitute_tokens_in_yaml(template_path, custom_variables)
             print(rendered_selenium_hub_deployment_template)
             api_response = api_instance.create_namespaced_deployment(namespace, yaml.safe_load(rendered_selenium_hub_deployment_template))
+            
             print("api_response rendered_selenium_hub_deployment_template")
             print(api_response)
         except client.exceptions.ApiException as e:
@@ -117,13 +118,22 @@ class PodCreateView(APIView):
             else:
                 print("An error occurred:", e)
 
+        
         for port in range(start_port, end_port):
             custom_variables["port"] = port
             template_path = Path(__file__).with_name('selenium_hub_service_template.yaml')
             rendered_selenium_hub_service_template = self.substitute_tokens_in_yaml(template_path, custom_variables)
             print(rendered_selenium_hub_service_template)
-            service_api_response = service_api_instance.create_namespaced_service(namespace=namespace, body=yaml.safe_load(rendered_selenium_hub_service_template))
-            print(service_api_response)
+            try:
+                service_api_response = service_api_instance.create_namespaced_service(namespace=namespace, body=yaml.safe_load(rendered_selenium_hub_service_template))
+                print(service_api_response)
+                break  # If service creation succeeds, exit the loop
+            except client.exceptions.ApiException as e:
+                if e.status == 409 and e.reason == "AlreadyExists":
+                    print(f"Port {port} already allocated.")
+                else:
+                    print("An error occurred:", e)
+                               
 
         template_path = Path(__file__).with_name('node_chrome_service_template.yaml')
         rendered_node_chrome_service_template = self.substitute_tokens_in_yaml(template_path, custom_variables)
