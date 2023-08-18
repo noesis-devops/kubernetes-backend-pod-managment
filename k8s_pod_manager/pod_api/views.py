@@ -176,10 +176,10 @@ class PodDeleteView(APIView):
         try:
             for namespace in request.data:
                 for deployment in request.data[namespace]["deployments"]:
-                    resp = apps_api.delete_namespaced_deployment(deployment_name, namespace)
+                    resp = apps_api.delete_namespaced_deployment(deployment, namespace)
                     print(resp)
                 for service in request.data[namespace]["services"]:
-                    resp = core_api.delete_namespaced_service(service_name, namespace)
+                    resp = core_api.delete_namespaced_service(service, namespace)
                     print(resp)
             return Response({'Deleted': request.data})
         except client.rest.ApiException as e:
