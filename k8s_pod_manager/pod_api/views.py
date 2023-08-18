@@ -5,8 +5,10 @@ from django.shortcuts import render
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from kubernetes import client, config
-
-config.load_incluster_config()
+from jinja2 import Template
+from pathlib import Path
+import yaml
+config.load_kube_config()
 
 class PodManagement:
 
@@ -47,45 +49,98 @@ class PodsInNamespaceView(APIView):
             return Response({'message': f'Error fetching pods in namespace {namespace}'}, status=400)
 
 class PodCreateView(APIView):
+    def substitute_tokens_in_yaml(self, yaml_path, variables):
+        with open(yaml_path, 'r') as template_file:
+            template_content = template_file.read()
+
+        template = Template(template_content)
+        rendered_yaml = template.render(**variables)
+        return rendered_yaml
     def post(self, request):
         # Load Kubernetes configuration
-        config.load_incluster_config()
+        config.load_kube_config()
 
 
         # Parse request data
         namespace = request.data.get('namespace')
-        pod_name = request.data.get('pod_name')
-        container_name = request.data.get('container_name')
-        image = request.data.get('image')
-        
+        port_range = request.data.get('port-range')
+
         # Create Kubernetes API client
-        v1 = client.CoreV1Api()
+        #v1 = client.CoreV1Api()
 
         # Define pod manifest
-        pod_manifest = {
-            "apiVersion": "v1",
-            "kind": "Pod",
-            "metadata": {"name": pod_name},
-            "spec": {
-                "containers": [
-                    {
-                        "name": container_name,
-                        "image": image,
-                    }
-                ]
-            }
+        #pod_manifest = {
+        #    "apiVersion": "v1",
+        #    "kind": "Pod",
+        #    "metadata": {"name": pod_name},
+        #    "spec": {
+        #        "containers": [
+        #            {
+        #                "name": container_name,
+        #                "image": image,
+        #            }
+        #        ]
+        #    }
+        #}
+        
+        start_port, end_port = map(int, port_range.split("-"))
+        custom_variables = {
+            'port': port_range,
+            'selenium_hub_image': request.data.get('selenium-hub-image'),
+            'selenium_node_chrome_image': request.data.get('selenium-node-chrome-image')
         }
+        
+        api_instance = client.AppsV1Api()
+        service_api_instance = client.CoreV1Api()
 
-        # Create the pod
+        template_path = Path(__file__).with_name('selenium_hub_deployment_template.yaml')
+        rendered_selenium_hub_deployment_template = self.substitute_tokens_in_yaml(template_path, custom_variables)
+        print(rendered_selenium_hub_deployment_template)
+        api_response = api_instance.create_namespaced_deployment(namespace, yaml.safe_load(rendered_selenium_hub_deployment_template))
+        print(api_response)
+        
+        template_path = Path(__file__).with_name('node_chrome_deployment_template.yaml')
+        rendered_node_chrome_deployment_template = self.substitute_tokens_in_yaml(template_path, custom_variables)
+        print(rendered_node_chrome_deployment_template)
+        api_response = api_instance.create_namespaced_deployment(namespace, yaml.safe_load(rendered_node_chrome_deployment_template))
+        print(api_response)
+
+        for port in range(start_port, end_port):
+            custom_variables["port"] = port
+            template_path = Path(__file__).with_name('selenium_hub_service_template.yaml')
+            rendered_selenium_hub_service_template = self.substitute_tokens_in_yaml(template_path, custom_variables)
+            print(rendered_selenium_hub_service_template)
+            service_api_response = service_api_instance.create_namespaced_service(namespace=namespace, body=yaml.safe_load(rendered_selenium_hub_service_template))
+            print(service_api_response)
+
+        template_path = Path(__file__).with_name('node_chrome_service_template.yaml')
+        rendered_node_chrome_service_template = self.substitute_tokens_in_yaml(template_path, custom_variables)
+        print(rendered_node_chrome_service_template)
+        service_api_response = service_api_instance.create_namespaced_service(namespace=namespace, body=yaml.safe_load(rendered_node_chrome_service_template))
+        print(service_api_response)
+            
         try:
-            resp = v1.create_namespaced_pod(namespace, pod_manifest)
-            return Response({'message': 'Pod created successfully', 'pod_name': resp.metadata.name, 'namespace': resp.metadata.namespace})
+            
+            return Response({'message': f'selenium and chrome {custom_variables["port"]} created successfully', 'pod_name': resp.metadata.name, 'namespace': resp.metadata.namespace, 'port': custom_variables['port']})
         except Exception as e:
-            return Response({'message': f'Error creating pod: {str(e)}'}, status=400)
+            return Response({'message': f'Error creating deployment or service: {str(e)}'}, status=400)
+
+        
+    
+        
+        # Deploy the service
+       
+        # Read the content of your rendered manifests
+        # Create the pod
+        #try:
+        #    resp = v1.create_namespaced_pod(namespace, pod_manifest)
+        #    return Response({'message': 'Pod created successfully', 'pod_name': resp.metadata.name, 'namespace': resp.metadata.namespace})
+        #except Exception as e:
+        #    return Response({'message': f'Error creating pod: {str(e)}'}, status=400)
 
 class PodDeleteView(APIView):
     def delete(self, request, namespace, pod_name):
-        config.load_incluster_config()
+        config.load_kube_config()
 
         # Create Kubernetes API client
         v1 = client.CoreV1Api()

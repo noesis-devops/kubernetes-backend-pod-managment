@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: selenium-hub-{{ port }}
+  namespace: ntx
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: selenium-hub-{{ port }}
+  template:
+    metadata:
+      labels:
+        app: selenium-hub-{{ port }}
+    spec:
+      containers:
+        - name: selenium-hub-{{ port }}
+          image: {{ selenium_hub_image }}
+          ports:
+            - containerPort: 4442
+              name: publish
+            - containerPort: 4443
+              name: subscribe
+            - containerPort: 4444
+              name: hub
+
