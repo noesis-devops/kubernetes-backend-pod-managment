@@ -157,11 +157,8 @@ class PodCreateView(APIView):
                 
         # delete everything if something fails    
         if succeeds == False:
-           try:
-                service_api_instance.delete_namespaced_service(service_name, namespace)
-                print(f"Service '{service_name}' deleted successfully.")
-            except client.exceptions.ApiException as e:
-                print("An error occurred:", e) 
+            service_api_instance.delete_namespaced_service(service_name, namespace)
+            print(f"Service '{service_name}' deleted successfully.")
             
         return Response({'objects_created': resp, "port": custom_variables["port"]})
         
