@@ -92,19 +92,30 @@ class PodCreateView(APIView):
         
         api_instance = client.AppsV1Api()
         service_api_instance = client.CoreV1Api()
-
-        template_path = Path(__file__).with_name('selenium_hub_deployment_template.yaml')
-        rendered_selenium_hub_deployment_template = self.substitute_tokens_in_yaml(template_path, custom_variables)
-        print(rendered_selenium_hub_deployment_template)
-        api_response = api_instance.create_namespaced_deployment(namespace, yaml.safe_load(rendered_selenium_hub_deployment_template))
-        print("api_response rendered_selenium_hub_deployment_template")
-        print(api_response)
+        try:
+            template_path = Path(__file__).with_name('selenium_hub_deployment_template.yaml')
+            rendered_selenium_hub_deployment_template = self.substitute_tokens_in_yaml(template_path, custom_variables)
+            print(rendered_selenium_hub_deployment_template)
+            api_response = api_instance.create_namespaced_deployment(namespace, yaml.safe_load(rendered_selenium_hub_deployment_template))
+            print("api_response rendered_selenium_hub_deployment_template")
+            print(api_response)
+        except client.exceptions.ApiException as e:
+            if e.status == 409 and e.reason == "AlreadyExists":
+                print("Deployment already exists.")
+            else:
+                print("An error occurred:", e)
         
-        template_path = Path(__file__).with_name('node_chrome_deployment_template.yaml')
-        rendered_node_chrome_deployment_template = self.substitute_tokens_in_yaml(template_path, custom_variables)
-        print(rendered_node_chrome_deployment_template)
-        api_response = api_instance.create_namespaced_deployment(namespace, yaml.safe_load(rendered_node_chrome_deployment_template))
-        print(api_response)
+        try:
+            template_path = Path(__file__).with_name('node_chrome_deployment_template.yaml')
+            rendered_node_chrome_deployment_template = self.substitute_tokens_in_yaml(template_path, custom_variables)
+            print(rendered_node_chrome_deployment_template)
+            api_response = api_instance.create_namespaced_deployment(namespace, yaml.safe_load(rendered_node_chrome_deployment_template))
+            print(api_response)
+        except client.exceptions.ApiException as e:
+            if e.status == 409 and e.reason == "AlreadyExists":
+                print("Deployment already exists.")
+            else:
+                print("An error occurred:", e)
 
         for port in range(start_port, end_port):
             custom_variables["port"] = port
