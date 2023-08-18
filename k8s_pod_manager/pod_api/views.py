@@ -170,15 +170,16 @@ class PodDeleteView(APIView):
         config.load_kube_config()
 
         # Create Kubernetes API client
-        v1 = client.CoreV1Api()
+        core_api = client.CoreV1Api()
+        apps_api = client.AppsV1Api()
         # Delete deployments and services
         try:
             for namespace in request.data:
                 for deployment in request.data[namespace]["deployments"]:
-                    resp = v1.delete_namespaced_deployment(deployment_name, namespace)
+                    resp = apps_api.delete_namespaced_deployment(deployment_name, namespace)
                     print(resp)
                 for service in request.data[namespace]["services"]:
-                    resp = v1.delete_namespaced_service(service_name, namespace)
+                    resp = core_api.delete_namespaced_service(service_name, namespace)
                     print(resp)
             return Response({'Deleted': request.data})
         except client.rest.ApiException as e:
