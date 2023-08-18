@@ -93,7 +93,7 @@ class PodCreateView(APIView):
         api_instance = client.AppsV1Api()
         service_api_instance = client.CoreV1Api()
         
-        resp = {namespace: "deployments": [], "services": []}
+        resp = {namespace: {"deployments": [], "services": []}}
         
         succeeds = False
         
