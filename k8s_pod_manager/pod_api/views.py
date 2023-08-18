@@ -93,7 +93,9 @@ class PodCreateView(APIView):
         api_instance = client.AppsV1Api()
         service_api_instance = client.CoreV1Api()
         
-        resp = {}
+        resp = {namespace: "deployments": [], "services": []}
+        
+        succeeds = False
         
         for port in range(start_port, end_port):
             custom_variables["port"] = port
@@ -103,9 +105,11 @@ class PodCreateView(APIView):
             try:
                 service_api_response = service_api_instance.create_namespaced_service(namespace=namespace, body=yaml.safe_load(rendered_selenium_hub_service_template))
                 print(service_api_response)
-                resp["selenium_hub_service_name"] = service_api_response.metadata.name
+                resp[namespace]["services"].append(service_api_response.metadata.name)
+                succeeds = True
                 break  # If service creation succeeds, exit the loop
             except client.exceptions.ApiException as e:
+                succeeds = False
                 if e.status == 409 and e.reason == "AlreadyExists":
                     print(f"Port {port} already allocated.")
                 else:
@@ -117,7 +121,8 @@ class PodCreateView(APIView):
         print(rendered_node_chrome_service_template)
         service_api_response = service_api_instance.create_namespaced_service(namespace=namespace, body=yaml.safe_load(rendered_node_chrome_service_template))
         print(service_api_response)
-        resp["node_chrome_service_name"] = service_api_response.metadata.name
+        resp[namespace]["services"].append(service_api_response.metadata.name)
+        succeeds = True
         
         try:
             template_path = Path(__file__).with_name('selenium_hub_deployment_template.yaml')
@@ -126,8 +131,10 @@ class PodCreateView(APIView):
             api_response = api_instance.create_namespaced_deployment(namespace, yaml.safe_load(rendered_selenium_hub_deployment_template))
             print("api_response rendered_selenium_hub_deployment_template")
             print(api_response)
-            resp["selenium_hub_deployment_name"] = service_api_response.metadata.name
+            resp[namespace]["deployments"].append(service_api_response.metadata.name)
+            succeeds = True
         except client.exceptions.ApiException as e:
+            succeeds = False
             if e.status == 409 and e.reason == "AlreadyExists":
                 print("Deployment already exists.")
             else:
@@ -139,25 +146,27 @@ class PodCreateView(APIView):
             print(rendered_node_chrome_deployment_template)
             api_response = api_instance.create_namespaced_deployment(namespace, yaml.safe_load(rendered_node_chrome_deployment_template))
             print(api_response)
-            resp["node_chrome_deployment_name"] = service_api_response.metadata.name
+            resp[namespace]["deployments"].append(service_api_response.metadata.name)
+            succeeds = True
         except client.exceptions.ApiException as e:
+            succeeds = False
             if e.status == 409 and e.reason == "AlreadyExists":
                 print("Deployment already exists.")
             else:
                 print("An error occurred:", e)
+                
+        # delete everything if something fails    
+        if succeeds == False:
+           try:
+                service_api_instance.delete_namespaced_service(service_name, namespace)
+                print(f"Service '{service_name}' deleted successfully.")
+            except client.exceptions.ApiException as e:
+                print("An error occurred:", e) 
+            
         return Response({'objects_created': resp, "port": custom_variables["port"]})
         
     
         
-        # Deploy the service
-       
-        # Read the content of your rendered manifests
-        # Create the pod
-        #try:
-        #    resp = v1.create_namespaced_pod(namespace, pod_manifest)
-        #    return Response({'message': 'Pod created successfully', 'pod_name': resp.metadata.name, 'namespace': resp.metadata.namespace})
-        #except Exception as e:
-        #    return Response({'message': f'Error creating pod: {str(e)}'}, status=400)
 
 class PodDeleteView(APIView):
     def delete(self, request, namespace, pod_name):
