@@ -46,8 +46,8 @@ INSTALLED_APPS = [
 ELASTIC_APM = {
   'SERVICE_NAME': 'ntx-kubernetes-pod-management-api',
   
-  'SECRET_TOKEN': os.environ.get('SECRET_TOKEN'),
-  'SERVER_URL': os.environ.get('SERVER_URL'),
+  'SECRET_TOKEN': os.environ.get('SECRET_TOKEN').rstrip(),
+  'SERVER_URL': os.environ.get('SERVER_URL').rstrip(),
   'ENVIRONMENT': 'dev',
   'DEBUG': True,
   'ELASTIC_APM_VERIFY_SERVER_CERT': False,
