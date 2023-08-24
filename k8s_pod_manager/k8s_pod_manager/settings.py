@@ -31,6 +31,7 @@ ALLOWED_HOSTS = ['*']
 # Application definition
 
 INSTALLED_APPS = [
+    'elasticapm.contrib.django',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -41,7 +42,17 @@ INSTALLED_APPS = [
     'pod_api',
 ]
 
+ELASTIC_APM = {
+  'SERVICE_NAME': 'ntx-kubernetes-pod-management-api',
+  'SECRET_TOKEN': 'SECRET_TOKEN',
+  'SERVER_URL': 'SERVER_URL',
+  'ENVIRONMENT': 'dev',
+  'DEBUG': True,
+  'ELASTIC_APM_VERIFY_SERVER_CERT': False,
+}
+
 MIDDLEWARE = [
+    'elasticapm.contrib.django.middleware.TracingMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',

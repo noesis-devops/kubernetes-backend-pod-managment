@@ -8,14 +8,13 @@ from kubernetes import client, config
 from jinja2 import Template
 from pathlib import Path
 import yaml
-config.load_kube_config()
+config.load_incluster_config()
 
 class PodManagement:
-
     def get_pods_in_namespace(self, namespace):
         try:
-            v1 = client.CoreV1Api()
-            api_response = v1.list_namespaced_pod(namespace)
+            core_api = client.CoreV1Api()
+            api_response = core_api.list_namespaced_pod(namespace)
             pod_list = [pod.metadata.name for pod in api_response.items]
             return pod_list
         except client.rest.ApiException as e:
@@ -23,15 +22,15 @@ class PodManagement:
 
 class PodListView(APIView):
     def get(self, request):
-        v1 = client.CoreV1Api()
-        namespaces = v1.list_namespace().items
+        core_api = client.CoreV1Api()
+        namespaces = core_api.list_namespace().items
 
         pod_data = []
 
         # Iterate through namespaces and pods
         for namespace in namespaces:
             namespace_name = namespace.metadata.name
-            pods = v1.list_namespaced_pod(namespace_name).items
+            pods = core_api.list_namespaced_pod(namespace_name).items
 
             pod_list = [pod.metadata.name for pod in pods]
             pod_data.append({namespace_name: pod_list})
@@ -58,30 +57,11 @@ class PodCreateView(APIView):
         return rendered_yaml
     def post(self, request):
         # Load Kubernetes configuration
-        config.load_kube_config()
-
+        config.load_incluster_config()
 
         # Parse request data
         namespace = request.data.get('namespace')
         port_range = request.data.get('port-range')
-
-        # Create Kubernetes API client
-        #v1 = client.CoreV1Api()
-
-        # Define pod manifest
-        #pod_manifest = {
-        #    "apiVersion": "v1",
-        #    "kind": "Pod",
-        #    "metadata": {"name": pod_name},
-        #    "spec": {
-        #        "containers": [
-        #            {
-        #                "name": container_name,
-        #                "image": image,
-        #            }
-        #        ]
-        #    }
-        #}
         
         start_port, end_port = map(int, port_range.split("-"))
         custom_variables = {
@@ -90,8 +70,8 @@ class PodCreateView(APIView):
             'selenium_node_chrome_image': request.data.get('selenium-node-chrome-image')
         }
         
-        api_instance = client.AppsV1Api()
-        service_api_instance = client.CoreV1Api()
+        core_api = client.CoreV1Api()
+        apps_api = client.AppsV1Api()
         
         resp = {namespace: {"deployments": [], "services": []}}
         
@@ -103,7 +83,7 @@ class PodCreateView(APIView):
             rendered_selenium_hub_service_template = self.substitute_tokens_in_yaml(template_path, custom_variables)
             print(rendered_selenium_hub_service_template)
             try:
-                service_api_response = service_api_instance.create_namespaced_service(namespace=namespace, body=yaml.safe_load(rendered_selenium_hub_service_template))
+                service_api_response = core_api.create_namespaced_service(namespace=namespace, body=yaml.safe_load(rendered_selenium_hub_service_template))
                 print(service_api_response)
                 resp[namespace]["services"].append(service_api_response.metadata.name)
                 succeeds = True
@@ -119,7 +99,7 @@ class PodCreateView(APIView):
         template_path = Path(__file__).with_name('node_chrome_service_template.yaml')
         rendered_node_chrome_service_template = self.substitute_tokens_in_yaml(template_path, custom_variables)
         print(rendered_node_chrome_service_template)
-        service_api_response = service_api_instance.create_namespaced_service(namespace=namespace, body=yaml.safe_load(rendered_node_chrome_service_template))
+        service_api_response = core_api.create_namespaced_service(namespace=namespace, body=yaml.safe_load(rendered_node_chrome_service_template))
         print(service_api_response)
         resp[namespace]["services"].append(service_api_response.metadata.name)
         succeeds = True
@@ -128,9 +108,7 @@ class PodCreateView(APIView):
             template_path = Path(__file__).with_name('selenium_hub_deployment_template.yaml')
             rendered_selenium_hub_deployment_template = self.substitute_tokens_in_yaml(template_path, custom_variables)
             print(rendered_selenium_hub_deployment_template)
-            api_response = api_instance.create_namespaced_deployment(namespace, yaml.safe_load(rendered_selenium_hub_deployment_template))
-            print("api_response rendered_selenium_hub_deployment_template")
-            print(api_response)
+            api_response = apps_api.create_namespaced_deployment(namespace, yaml.safe_load(rendered_selenium_hub_deployment_template))
             resp[namespace]["deployments"].append(api_response.metadata.name)
             succeeds = True
         except client.exceptions.ApiException as e:
@@ -144,7 +122,7 @@ class PodCreateView(APIView):
             template_path = Path(__file__).with_name('node_chrome_deployment_template.yaml')
             rendered_node_chrome_deployment_template = self.substitute_tokens_in_yaml(template_path, custom_variables)
             print(rendered_node_chrome_deployment_template)
-            api_response = api_instance.create_namespaced_deployment(namespace, yaml.safe_load(rendered_node_chrome_deployment_template))
+            api_response = apps_api.create_namespaced_deployment(namespace, yaml.safe_load(rendered_node_chrome_deployment_template))
             print(api_response)
             resp[namespace]["deployments"].append(api_response.metadata.name)
             succeeds = True
@@ -157,8 +135,13 @@ class PodCreateView(APIView):
                 
         # delete everything if something fails    
         if succeeds == False:
-            service_api_instance.delete_namespaced_service(service_name, namespace)
-            print(f"Service '{service_name}' deleted successfully.")
+            for deployment in resp[namespace]["deployments"]:
+                    resp = apps_api.delete_namespaced_deployment(deployment, namespace)
+                    print(f"'{deployment}' deleted successfully.")
+            for service in resp[namespace]["services"]:
+                resp = core_api.delete_namespaced_service(service, namespace)
+                print(f"'{service}' deleted successfully.")
+            return Response({'deleted': resp})
             
         return Response({'objects_created': resp, "port": custom_variables["port"]})
         
@@ -167,7 +150,7 @@ class PodCreateView(APIView):
 
 class PodDeleteView(APIView):
     def delete(self, request):
-        config.load_kube_config()
+        config.load_incluster_config()
 
         # Create Kubernetes API client
         core_api = client.CoreV1Api()

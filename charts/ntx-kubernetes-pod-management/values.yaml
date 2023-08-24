@@ -1,0 +1,17 @@
+account:
+  serviceAccount:
+    annotations: {}
+deployment:
+  ntxKubernetesPodManagement:
+    image:
+      repository: docker.io/leandrofrs/kubernetes-pods-api-management
+      tag: v34
+    imagePullPolicy: Always
+  replicas: 1
+kubernetesClusterDomain: cluster.local
+service:
+  ports:
+  - nodePort: 32014
+    port: 8000
+    targetPort: 8000
+  type: NodePort
