@@ -36,7 +36,7 @@ jobs:
           context: .
           file: ./k8s_pod_manager/Dockerfile
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/kubernetes-pods-api-management:v39
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/kubernetes-pods-api-management:v40
   deployment:
     runs-on: ubuntu-latest
     environment: DEV
