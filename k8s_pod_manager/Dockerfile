@@ -9,11 +9,11 @@ ENV PYTHONUNBUFFERED 1
 WORKDIR /app
 
 # Copy requirements and install
-COPY requirements.txt /app/
+COPY ./k8s_pod_manager/requirements.txt /app/
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy the rest of the application
-COPY . /app/
+COPY ./k8s_pod_manager/. /app/
 
 # Expose the port the application runs on
 EXPOSE 8000
