@@ -1,0 +1,13 @@
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: kubernetes-backend-pod-management
+  description: An API to interact with Kubernetes cluster.
+  # Example for optional annotations
+  annotations:
+    github.com/project-slug: noesis-devops/kubernetes-backend-pod-managment
+    backstage.io/techdocs-ref: dir:.
+spec:
+  type: openapi
+  owner: group:admins
+  lifecycle: development

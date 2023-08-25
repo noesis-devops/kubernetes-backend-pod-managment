@@ -1,0 +1,68 @@
+openapi: 3.0.3
+info:
+  title: ''
+  version: 0.0.0
+paths:
+  /api/create/:
+    post:
+      operationId: create_create
+      tags:
+      - create
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/delete/:
+    delete:
+      operationId: delete_destroy
+      tags:
+      - delete
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '204':
+          description: No response body
+  /api/pods/:
+    get:
+      operationId: pods_retrieve
+      tags:
+      - pods
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/pods/{namespace}/:
+    get:
+      operationId: pods_retrieve_2
+      parameters:
+      - in: path
+        name: namespace
+        schema:
+          type: string
+        required: true
+      tags:
+      - pods
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+components:
+  securitySchemes:
+    basicAuth:
+      type: http
+      scheme: basic
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: sessionid

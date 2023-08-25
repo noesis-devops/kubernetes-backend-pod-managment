@@ -41,7 +41,13 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'pod_api',
+    'drf_spectacular',
 ]
+
+REST_FRAMEWORK = {
+    # your other DRF settings here
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+}
 
 ELASTIC_APM = {
   'SERVICE_NAME': 'ntx-kubernetes-pod-management-api',
