@@ -9,7 +9,9 @@ metadata:
     backstage.io/techdocs-ref: dir:.
 spec:
   type: openapi
-  owner: group:admins
+  owner: group:da-devops
+  system: NTX
   lifecycle: development
+  apiConsumedBy: ['NTX']
   definition:
     $text: https://github.com/noesis-devops/kubernetes-backend-pod-managment/blob/main/k8s_pod_manager/schema.yml
