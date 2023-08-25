@@ -1,0 +1,7 @@
+site_name: 'Kubernetes Pod Management | Docs'
+
+nav:
+  - Home: index.md
+
+plugins:
+  - techdocs-core
