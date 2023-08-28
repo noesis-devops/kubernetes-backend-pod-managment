@@ -7,6 +7,9 @@ metadata:
   annotations:
     github.com/project-slug: noesis-devops/kubernetes-backend-pod-managment
     backstage.io/techdocs-ref: dir:.
+  links:
+    - url: http://10.255.0.155:32014
+      title: 'NTX Kubernetes pod management'
 spec:
   type: openapi
   owner: group:da-devops
