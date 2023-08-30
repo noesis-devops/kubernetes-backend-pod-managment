@@ -188,7 +188,7 @@ class PodCreateView(APIView):
         
         if succeeds == False:
             delete_deployment_and_service(resp)
-            return return Response({'message': f'Deployments or services cannot be created: {resp}'}, status=500)
+            return Response({'message': f'Deployments or services cannot be created: {resp}'}, status=500)
         
         for deployment in resp[namespace]["deployments"]:
             ready = wait_for_deployment_ready(apps_api, namespace, deployment, timeout_seconds=80)
