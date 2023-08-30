@@ -84,22 +84,43 @@ class PodCreateView(APIView):
         template = Template(template_content)
         rendered_yaml = template.render(**variables)
         return rendered_yaml
+    def set_custom_variables(request):
+        # Parse request data
+        namespace = request.data.get('namespace')
+        if namespace is None:
+            namespace = 'ntx'
+        port_range = request.data.get('port-range')
+        if port_range is None:
+            return Response({'message': 'Missing port-range in request'}, status=400)
+        port_range_parts = port_range.split("-")
+        if len(port_range_parts) != 2:
+            return Response({'message': 'Invalid port-range format'}, status=400)
+        try:
+            start_port, end_port = sorted(map(int, port_range_parts))
+        except ValueError:
+            return Response({'message': 'Invalid port-range values'}, status=400)
+        if start_port >= end_port:
+            return Response({'message': 'Invalid port-range values: start_port must be less than end_port'}, status=400)
+
+        default_selenium_hub_image = 'default_hub_image'
+        default_selenium_node_chrome_image = 'default_node_chrome_image'
+        default_se_node_session_timeout = 300  # Default timeout in seconds
+
+        custom_variables = {
+            'port': port_range,
+            'selenium_hub_image': request.data.get('selenium-hub-image', default_selenium_hub_image),
+            'selenium_node_chrome_image': request.data.get('selenium-node-chrome-image', default_selenium_node_chrome_image),
+            'se_node_session_timeout': request.data.get('se_node_session_timeout', default_se_node_session_timeout)
+        }
+        
+        return namespace, start_port, end_port, custom_variables
     def post(self, request):
         # Load Kubernetes configuration
         config.load_incluster_config()
 
-        # Parse request data
-        namespace = request.data.get('namespace')
-        port_range = request.data.get('port-range')
         
-        start_port, end_port = map(int, port_range.split("-"))
-        custom_variables = {
-            'port': port_range,
-            'selenium_hub_image': request.data.get('selenium-hub-image'),
-            'selenium_node_chrome_image': request.data.get('selenium-node-chrome-image'),
-            'se_node_session_timeout': request.data.get('se_node_session_timeout')
-        }
         
+        namespace, start_port, end_port, custom_variables = self.set_custom_variables(request)
         core_api = client.CoreV1Api()
         apps_api = client.AppsV1Api()
         
