@@ -117,9 +117,6 @@ class PodCreateView(APIView):
     def post(self, request):
         # Load Kubernetes configuration
         config.load_incluster_config()
-
-        
-        
         namespace, start_port, end_port, custom_variables = self.set_custom_variables(request)
         core_api = client.CoreV1Api()
         apps_api = client.AppsV1Api()
