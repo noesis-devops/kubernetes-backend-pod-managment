@@ -128,14 +128,16 @@ class PodCreateView(APIView):
         
         succeeds = False
         
+        api_response = None
+        
         for port in range(start_port, end_port):
             custom_variables["port"] = port
             template_path = Path(__file__).with_name('selenium_hub_service_template.yaml')
             rendered_selenium_hub_service_template = self.substitute_tokens_in_yaml(template_path, custom_variables)
             try:
-                service_api_response = core_api.create_namespaced_service(namespace=namespace, body=yaml.safe_load(rendered_selenium_hub_service_template))
-                resp[namespace]["services"].append(service_api_response.metadata.name)
-                print(f"Service {service_api_response.metadata.name} created successfully.")
+                api_response = core_api.create_namespaced_service(namespace=namespace, body=yaml.safe_load(rendered_selenium_hub_service_template))
+                resp[namespace]["services"].append(api_response.metadata.name)
+                print(f"Service {api_response.metadata.name} created successfully.")
                 succeeds = True
                 break  # If service creation succeeds, exit the loop
             except client.exceptions.ApiException as e:
@@ -143,20 +145,20 @@ class PodCreateView(APIView):
                 if e.status == 409 and e.reason == "AlreadyExists":
                     print(f"Port {port} already allocated.")
                 else:
-                    print(f"An error occurred creating service {service_api_response.metadata.name}:", e)
+                    print(f"An error occurred creating service {api_response.metadata.name}:", e)
                                
 
         template_path = Path(__file__).with_name('node_chrome_service_template.yaml')
         rendered_node_chrome_service_template = self.substitute_tokens_in_yaml(template_path, custom_variables)
         print(rendered_node_chrome_service_template)
         try:
-            service_api_response = core_api.create_namespaced_service(namespace=namespace, body=yaml.safe_load(rendered_node_chrome_service_template))
-            resp[namespace]["services"].append(service_api_response.metadata.name)
-            print(f"Service {service_api_response.metadata.name} created successfully.")
+            api_response = core_api.create_namespaced_service(namespace=namespace, body=yaml.safe_load(rendered_node_chrome_service_template))
+            resp[namespace]["services"].append(api_response.metadata.name)
+            print(f"Service {api_response.metadata.name} created successfully.")
             succeeds = True
         except client.exceptions.ApiException as e:
                 succeeds = False
-                print(f"An error occurred creating service {service_api_response.metadata.name}:", e)
+                print(f"An error occurred creating service {api_response.metadata.name}:", e)
         
         try:
             template_path = Path(__file__).with_name('selenium_hub_deployment_template.yaml')
