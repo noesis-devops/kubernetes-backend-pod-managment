@@ -89,12 +89,19 @@ class PodCreateView(APIView):
         namespace = request.data.get('namespace')
         if namespace is None:
             namespace = 'ntx'
-        
         port_range = request.data.get('port-range')
         if port_range is None:
             return Response({'message': 'Missing port-range in request'}, status=400)
-        start_port, end_port = map(int, port_range.split("-"))
-        
+        port_range_parts = port_range.split("-")
+        if len(port_range_parts) != 2:
+            return Response({'message': 'Invalid port-range format'}, status=400)
+        try:
+            start_port, end_port = sorted(map(int, port_range_parts))
+        except ValueError:
+            return Response({'message': 'Invalid port-range values'}, status=400)
+        if start_port >= end_port:
+            return Response({'message': 'Invalid port-range values: start_port must be less than end_port'}, status=400)
+
         default_selenium_hub_image = 'default_hub_image'
         default_selenium_node_chrome_image = 'default_node_chrome_image'
         default_se_node_session_timeout = 300  # Default timeout in seconds
@@ -135,8 +142,8 @@ class PodCreateView(APIView):
                 break  # If service creation succeeds, exit the loop
             except client.exceptions.ApiException as e:
                 succeeds = False
-                if e.status == 409 and e.reason == "AlreadyExists":
-                    print(f"Port {port} already allocated.")
+                if e.status == 422 and "port is already allocated" in e.message:
+                    print({'message': e.message})
                 else:
                     print(f"An error occurred creating service {api_response.metadata.name}:", e)
                                
@@ -151,7 +158,10 @@ class PodCreateView(APIView):
             succeeds = True
         except client.exceptions.ApiException as e:
                 succeeds = False
-                print(f"An error occurred creating service {api_response.metadata.name}:", e)
+                if e.status == 422 and "port is already allocated" in e.message:
+                    print({'message': e.message})
+                else:
+                    print(f"An error occurred creating service {api_response.metadata.name}:", e)
         
         try:
             template_path = Path(__file__).with_name('selenium_hub_deployment_template.yaml')
@@ -163,7 +173,7 @@ class PodCreateView(APIView):
         except client.exceptions.ApiException as e:
             succeeds = False
             if e.status == 409 and e.reason == "AlreadyExists":
-                print(f"Deployment {api_response.metadata.name} already exists.")
+                print(f"message: {e.}")
             else:
                 print(f"An error occurred creating deployment {api_response.metadata.name}:", e)
         
