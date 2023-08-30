@@ -170,7 +170,7 @@ class PodCreateView(APIView):
             selenium_hub_deployment_ready = wait_for_deployment_ready(apps_api, namespace, f'selenium-hub-{custom_variables["port"]}', timeout_seconds=120)
             node_chrome_deployment_ready = wait_for_deployment_ready(apps_api, namespace, f'chrome-{custom_variables["port"]}', timeout_seconds=120)
             
-            if selenium_hub_deployment_ready and node_chrome_deployment_ready:
+        if selenium_hub_deployment_ready and node_chrome_deployment_ready:
             return Response({'objects_created': resp, "port": custom_variables["port"]})
         else:
             return Response({'message': 'Deployments did not become ready within the timeout.'}, status=500)
