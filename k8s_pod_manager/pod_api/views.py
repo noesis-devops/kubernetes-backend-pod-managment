@@ -159,13 +159,13 @@ class PodCreateView(APIView):
                 print(f"'{service}' deleted successfully.")
             return Response({'deleted': resp})
         
-        futures = []
+        threads = []
         with ThreadPoolExecutor(max_workers=2) as executor:
             for deployment in resp[namespace]["deployments"]:
-                future.append(executor.submit(wait_for_deployment_ready, apps_api, namespace, deployment, 120))
+                threads.append(executor.submit(wait_for_deployment_ready, apps_api, namespace, deployment, 120))
 
-        for future, deployment_name in zip(futures, resp[namespace]["deployments"]):
-            if future.result():
+        for thread, deployment_name in zip(threads, resp[namespace]["deployments"]):
+            if thread.result():
                 print(f"{deployment_name} is ready")
             else:
                 return Response({'message': 'Timeout: Deployment did not start within the specified time.'}, status=400)
