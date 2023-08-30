@@ -23,6 +23,8 @@ rules:
   - create
   - delete
   - list
+  - get
+  - watch
 - apiGroups:
   - ""
   resources:
@@ -31,3 +33,5 @@ rules:
   - create
   - delete
   - list
+  - get
+  - watch
