@@ -146,7 +146,7 @@ class PodCreateView(APIView):
                 print("eeeeeeeeeee")
                 print("eeeeeeeeeee")
                 print(e)
-                print(api_response.json())
+                print(e.body)
                 if e.status == 422 and "port is already allocated" in e.body:
                     print({'message': e.body})
                 else:
@@ -167,7 +167,7 @@ class PodCreateView(APIView):
                 print("eeeeeeeeeee")
                 print("eeeeeeeeeee")
                 print(e)
-                print(api_response.json())
+                print(e.body)
                 if e.status == 422 and "port is already allocated" in e.body:
                     print({'message': e.body})
                 else:
