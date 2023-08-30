@@ -5,7 +5,7 @@ deployment:
   ntxKubernetesPodManagement:
     image:
       repository: docker.io/leandrofrs/kubernetes-pods-api-management
-      tag: v61
+      tag: v62
     imagePullPolicy: Always
   replicas: 1
 kubernetesClusterDomain: cluster.local
