@@ -84,7 +84,7 @@ class PodCreateView(APIView):
         template = Template(template_content)
         rendered_yaml = template.render(**variables)
         return rendered_yaml
-    def set_custom_variables(request):
+    def set_custom_variables(self, request):
         # Parse request data
         namespace = request.data.get('namespace')
         if namespace is None:
