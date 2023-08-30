@@ -13,6 +13,20 @@ from concurrent.futures import ThreadPoolExecutor
 
 config.load_incluster_config()
 
+def wait_for_deployment_ready(api_instance, namespace, deployment_name):
+        timeout = 120
+        start_time = time.time()
+        while time.time() - start_time < timeout:
+            try:
+                deployment = api_instance.read_namespaced_deployment(deployment_name, namespace)
+                if deployment.status.ready_replicas == deployment.spec.replicas:
+                    return True  # All replicas are ready
+            except client.exceptions.ApiException as e:
+                if e.status == 404:
+                    return False  # Deployment not found
+            time.sleep(2)
+        return False  # Timeout reached
+
 class PodManagement:
     def get_pods_in_namespace(self, namespace):
         try:
@@ -58,18 +72,6 @@ class PodCreateView(APIView):
         template = Template(template_content)
         rendered_yaml = template.render(**variables)
         return rendered_yaml
-    def wait_for_deployment_ready(api_instance, namespace, deployment_name, timeout):
-        start_time = time.time()
-        while time.time() - start_time < timeout:
-            try:
-                deployment = api_instance.read_namespaced_deployment(deployment_name, namespace)
-                if deployment.status.ready_replicas == deployment.spec.replicas:
-                    return True  # All replicas are ready
-            except client.exceptions.ApiException as e:
-                if e.status == 404:
-                    return False  # Deployment not found
-            time.sleep(2)
-        return False  # Timeout reached
     def post(self, request):
         # Load Kubernetes configuration
         config.load_incluster_config()
@@ -162,7 +164,7 @@ class PodCreateView(APIView):
         threads = []
         with ThreadPoolExecutor(max_workers=2) as executor:
             for deployment in resp[namespace]["deployments"]:
-                threads.append(executor.submit(self.wait_for_deployment_ready, apps_api, namespace, deployment, 120))
+                threads.append(executor.submit(wait_for_deployment_ready, apps_api, namespace, deployment))
 
         for thread, deployment_name in zip(threads, resp[namespace]["deployments"]):
             if thread.result():
