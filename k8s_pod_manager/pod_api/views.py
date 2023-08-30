@@ -147,8 +147,8 @@ class PodCreateView(APIView):
                 print("eeeeeeeeeee")
                 print(e)
                 print(api_response.json())
-                if api_response.json().get("code") == 422 and "port is already allocated" in api_response.json().get("message"):
-                    print({'message': e.message})
+                if e.status == 422 and "port is already allocated" in e.body:
+                    print({'message': e.body})
                 else:
                     print(f"An error occurred creating service {api_response.metadata.name}:", e)
                                
@@ -168,8 +168,8 @@ class PodCreateView(APIView):
                 print("eeeeeeeeeee")
                 print(e)
                 print(api_response.json())
-                if api_response.json().get("code") == 422 and "port is already allocated" in api_response.json().get("message"):
-                    print({'message': e.message})
+                if e.status == 422 and "port is already allocated" in e.body:
+                    print({'message': e.body})
                 else:
                     print(f"An error occurred creating service {api_response.metadata.name}:", e)
         
