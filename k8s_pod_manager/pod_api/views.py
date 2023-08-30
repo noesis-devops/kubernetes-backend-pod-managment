@@ -167,7 +167,7 @@ class PodCreateView(APIView):
                 print(f"'{service}' deleted successfully.")
             return Response({'deleted': resp})
         
-        for deployment in resp[namespace]["services"]:
+        for deployment in resp[namespace]["deployments"]:
             ready = wait_for_deployment_ready(apps_api, namespace, deployment, timeout_seconds=80)
             if ready:
                 continue
