@@ -173,7 +173,7 @@ class PodCreateView(APIView):
         except client.exceptions.ApiException as e:
             succeeds = False
             if e.status == 409 and e.reason == "AlreadyExists":
-                print(f"message: {e.}")
+                print(f"message: {e.message}")
             else:
                 print(f"An error occurred creating deployment {api_response.metadata.name}:", e)
         
