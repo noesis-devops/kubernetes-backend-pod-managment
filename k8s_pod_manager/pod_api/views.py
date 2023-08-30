@@ -150,7 +150,6 @@ class PodCreateView(APIView):
 
         template_path = Path(__file__).with_name('node_chrome_service_template.yaml')
         rendered_node_chrome_service_template = self.substitute_tokens_in_yaml(template_path, custom_variables)
-        print(rendered_node_chrome_service_template)
         try:
             api_response = core_api.create_namespaced_service(namespace=namespace, body=yaml.safe_load(rendered_node_chrome_service_template))
             resp[namespace]["services"].append(api_response.metadata.name)
