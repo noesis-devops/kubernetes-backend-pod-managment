@@ -17,10 +17,6 @@ def wait_for_deployment_ready(apps_api, namespace, deployment_name, timeout_seco
 
     while True:
         deployment = apps_api.read_namespaced_deployment(deployment_name, namespace)
-        print("deployment.status.ready_replicas")
-        print(deployment.status.ready_replicas)
-        print("deployment.spec.replicas")
-        print(deployment.spec.replicas)
         if deployment.status.ready_replicas == deployment.spec.replicas:
             print(f"Deployment {deployment_name} is ready.")
             return True
@@ -29,9 +25,19 @@ def wait_for_deployment_ready(apps_api, namespace, deployment_name, timeout_seco
             print(f"Timeout reached while waiting for deployment {deployment_name} to be ready.")
             return False
 
-        time.sleep(5)  # Wait for 5 seconds before checking again
+        time.sleep(3)  # Wait for 5 seconds before checking again
 
     return False  # In case of unexpected exit from the loop
+
+# delete everything if something fails    
+def delete_deployment_and_service(resp):
+    for deployment in resp[namespace]["deployments"]:
+            resp = apps_api.delete_namespaced_deployment(deployment, namespace)
+            print(f"'{deployment}' deleted successfully.")
+    for service in resp[namespace]["services"]:
+        resp = core_api.delete_namespaced_service(service, namespace)
+        print(f"'{service}' deleted successfully.")
+    return Response({'deleted': resp})
 
 class PodManagement:
     def get_pods_in_namespace(self, namespace):
@@ -105,11 +111,10 @@ class PodCreateView(APIView):
             custom_variables["port"] = port
             template_path = Path(__file__).with_name('selenium_hub_service_template.yaml')
             rendered_selenium_hub_service_template = self.substitute_tokens_in_yaml(template_path, custom_variables)
-            print(rendered_selenium_hub_service_template)
             try:
                 service_api_response = core_api.create_namespaced_service(namespace=namespace, body=yaml.safe_load(rendered_selenium_hub_service_template))
-                print(service_api_response)
                 resp[namespace]["services"].append(service_api_response.metadata.name)
+                print(f"Service {service_api_response.metadata.name} created successfully.")
                 succeeds = True
                 break  # If service creation succeeds, exit the loop
             except client.exceptions.ApiException as e:
@@ -117,61 +122,59 @@ class PodCreateView(APIView):
                 if e.status == 409 and e.reason == "AlreadyExists":
                     print(f"Port {port} already allocated.")
                 else:
-                    print("An error occurred:", e)
+                    print(f"An error occurred creating service {service_api_response.metadata.name}:", e)
                                
 
         template_path = Path(__file__).with_name('node_chrome_service_template.yaml')
         rendered_node_chrome_service_template = self.substitute_tokens_in_yaml(template_path, custom_variables)
         print(rendered_node_chrome_service_template)
-        service_api_response = core_api.create_namespaced_service(namespace=namespace, body=yaml.safe_load(rendered_node_chrome_service_template))
-        print(service_api_response)
-        resp[namespace]["services"].append(service_api_response.metadata.name)
-        succeeds = True
+        try:
+            service_api_response = core_api.create_namespaced_service(namespace=namespace, body=yaml.safe_load(rendered_node_chrome_service_template))
+            resp[namespace]["services"].append(service_api_response.metadata.name)
+            print(f"Service {service_api_response.metadata.name} created successfully.")
+            succeeds = True
+        except client.exceptions.ApiException as e:
+                succeeds = False
+                print(f"An error occurred creating service {service_api_response.metadata.name}:", e)
         
         try:
             template_path = Path(__file__).with_name('selenium_hub_deployment_template.yaml')
             rendered_selenium_hub_deployment_template = self.substitute_tokens_in_yaml(template_path, custom_variables)
-            print(rendered_selenium_hub_deployment_template)
             api_response = apps_api.create_namespaced_deployment(namespace, yaml.safe_load(rendered_selenium_hub_deployment_template))
             resp[namespace]["deployments"].append(api_response.metadata.name)
+            print(f"Deployment {api_response.metadata.name} created successfully.")
             succeeds = True
         except client.exceptions.ApiException as e:
             succeeds = False
             if e.status == 409 and e.reason == "AlreadyExists":
-                print("Deployment already exists.")
+                print(f"Deployment {api_response.metadata.name} already exists.")
             else:
-                print("An error occurred:", e)
+                print(f"An error occurred creating deployment {api_response.metadata.name}:", e)
         
         try:
             template_path = Path(__file__).with_name('node_chrome_deployment_template.yaml')
             rendered_node_chrome_deployment_template = self.substitute_tokens_in_yaml(template_path, custom_variables)
-            print(rendered_node_chrome_deployment_template)
             api_response = apps_api.create_namespaced_deployment(namespace, yaml.safe_load(rendered_node_chrome_deployment_template))
-            print(api_response)
             resp[namespace]["deployments"].append(api_response.metadata.name)
+            print(f"Deployment {api_response.metadata.name} created successfully.")
             succeeds = True
         except client.exceptions.ApiException as e:
             succeeds = False
             if e.status == 409 and e.reason == "AlreadyExists":
-                print("Deployment already exists.")
+                print(f"Deployment {api_response.metadata.name} already exists.")
             else:
-                print("An error occurred:", e)
-                
-        # delete everything if something fails    
+                print(f"An error occurred creating deployment {api_response.metadata.name}:", e)
+        
         if succeeds == False:
-            for deployment in resp[namespace]["deployments"]:
-                    resp = apps_api.delete_namespaced_deployment(deployment, namespace)
-                    print(f"'{deployment}' deleted successfully.")
-            for service in resp[namespace]["services"]:
-                resp = core_api.delete_namespaced_service(service, namespace)
-                print(f"'{service}' deleted successfully.")
-            return Response({'deleted': resp})
+            delete_deployment_and_service(resp)
+            return return Response({'message': f'Deployments or services cannot be created: {resp}'}, status=500)
         
         for deployment in resp[namespace]["deployments"]:
             ready = wait_for_deployment_ready(apps_api, namespace, deployment, timeout_seconds=80)
             if ready:
                 continue
             else:
+                delete_deployment_and_service(resp)
                 return Response({'message': f'Deployment {deployment} did not become ready within the timeout.'}, status=500)
             
         return Response({'objects_created': resp, "port": custom_variables["port"]})
