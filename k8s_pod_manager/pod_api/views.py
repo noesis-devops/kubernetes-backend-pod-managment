@@ -167,13 +167,15 @@ class PodCreateView(APIView):
                 print(f"'{service}' deleted successfully.")
             return Response({'deleted': resp})
         
-            selenium_hub_deployment_ready = wait_for_deployment_ready(apps_api, namespace, f'selenium-hub-{custom_variables["port"]}', timeout_seconds=120)
-            node_chrome_deployment_ready = wait_for_deployment_ready(apps_api, namespace, f'chrome-{custom_variables["port"]}', timeout_seconds=120)
+        for deployment in resp[namespace]["services"]:
+            ready = wait_for_deployment_ready(apps_api, namespace, deployment, timeout_seconds=80)
+            if ready:
+                continue
+            else:
+                return Response({'message': f'Deployment {deployment} did not become ready within the timeout.'}, status=500)
             
-        if selenium_hub_deployment_ready and node_chrome_deployment_ready:
-            return Response({'objects_created': resp, "port": custom_variables["port"]})
-        else:
-            return Response({'message': 'Deployments did not become ready within the timeout.'}, status=500)
+        return Response({'objects_created': resp, "port": custom_variables["port"]})
+
         
 
 class PodDeleteView(APIView):
