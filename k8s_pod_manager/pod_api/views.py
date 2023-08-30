@@ -59,17 +59,17 @@ class PodCreateView(APIView):
         rendered_yaml = template.render(**variables)
         return rendered_yaml
     def wait_for_deployment_ready(api_instance, namespace, deployment_name, timeout):
-    start_time = time.time()
-    while time.time() - start_time < timeout:
-        try:
-            deployment = api_instance.read_namespaced_deployment(deployment_name, namespace)
-            if deployment.status.ready_replicas == deployment.spec.replicas:
-                return True  # All replicas are ready
-        except client.exceptions.ApiException as e:
-            if e.status == 404:
-                return False  # Deployment not found
-        time.sleep(2)
-    return False  # Timeout reached
+        start_time = time.time()
+        while time.time() - start_time < timeout:
+            try:
+                deployment = api_instance.read_namespaced_deployment(deployment_name, namespace)
+                if deployment.status.ready_replicas == deployment.spec.replicas:
+                    return True  # All replicas are ready
+            except client.exceptions.ApiException as e:
+                if e.status == 404:
+                    return False  # Deployment not found
+            time.sleep(2)
+        return False  # Timeout reached
     def post(self, request):
         # Load Kubernetes configuration
         config.load_incluster_config()
