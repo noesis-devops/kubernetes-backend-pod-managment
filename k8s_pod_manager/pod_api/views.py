@@ -162,7 +162,7 @@ class PodCreateView(APIView):
         threads = []
         with ThreadPoolExecutor(max_workers=2) as executor:
             for deployment in resp[namespace]["deployments"]:
-                threads.append(executor.submit(wait_for_deployment_ready, apps_api, namespace, deployment, 120))
+                threads.append(executor.submit(self.wait_for_deployment_ready, apps_api, namespace, deployment, 120))
 
         for thread, deployment_name in zip(threads, resp[namespace]["deployments"]):
             if thread.result():
