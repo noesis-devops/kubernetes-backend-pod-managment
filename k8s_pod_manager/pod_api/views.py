@@ -102,8 +102,8 @@ class PodCreateView(APIView):
         if start_port >= end_port:
             return Response({'message': 'Invalid port-range values: start_port must be less than end_port'}, status=400)
 
-        default_selenium_hub_image = 'default_hub_image'
-        default_selenium_node_chrome_image = 'default_node_chrome_image'
+        default_selenium_hub_image = 'selenium/hub:4.1.2'
+        default_selenium_node_chrome_image = 'selenium/node-chrome:4.1.2'
         default_se_node_session_timeout = 300  # Default timeout in seconds
 
         custom_variables = {
