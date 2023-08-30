@@ -19,6 +19,7 @@ def wait_for_deployment_ready(api_instance, namespace, deployment_name):
         while time.time() - start_time < timeout:
             try:
                 deployment = api_instance.read_namespaced_deployment(deployment_name, namespace)
+                print(deployment)
                 if deployment.status.ready_replicas == deployment.spec.replicas:
                     return True  # All replicas are ready
             except client.exceptions.ApiException as e:
