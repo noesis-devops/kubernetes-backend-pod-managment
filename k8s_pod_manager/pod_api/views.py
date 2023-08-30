@@ -8,6 +8,9 @@ from kubernetes import client, config
 from jinja2 import Template
 from pathlib import Path
 import yaml
+from concurrent.futures import ThreadPoolExecutor
+
+
 config.load_incluster_config()
 
 class PodManagement:
@@ -55,6 +58,18 @@ class PodCreateView(APIView):
         template = Template(template_content)
         rendered_yaml = template.render(**variables)
         return rendered_yaml
+    def wait_for_deployment_ready(api_instance, namespace, deployment_name, timeout):
+    start_time = time.time()
+    while time.time() - start_time < timeout:
+        try:
+            deployment = api_instance.read_namespaced_deployment(deployment_name, namespace)
+            if deployment.status.ready_replicas == deployment.spec.replicas:
+                return True  # All replicas are ready
+        except client.exceptions.ApiException as e:
+            if e.status == 404:
+                return False  # Deployment not found
+        time.sleep(2)
+    return False  # Timeout reached
     def post(self, request):
         # Load Kubernetes configuration
         config.load_incluster_config()
@@ -67,7 +82,8 @@ class PodCreateView(APIView):
         custom_variables = {
             'port': port_range,
             'selenium_hub_image': request.data.get('selenium-hub-image'),
-            'selenium_node_chrome_image': request.data.get('selenium-node-chrome-image')
+            'selenium_node_chrome_image': request.data.get('selenium-node-chrome-image'),
+            'se_node_session_timeout': request.data.get('se_node_session_timeout')
         }
         
         core_api = client.CoreV1Api()
@@ -142,10 +158,19 @@ class PodCreateView(APIView):
                 resp = core_api.delete_namespaced_service(service, namespace)
                 print(f"'{service}' deleted successfully.")
             return Response({'deleted': resp})
-            
-        return Response({'objects_created': resp, "port": custom_variables["port"]})
         
-    
+        futures = []
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            for deployment in resp[namespace]["deployments"]:
+                future.append(executor.submit(wait_for_deployment_ready, apps_api, namespace, deployment, 120))
+
+        for future, deployment_name in zip(futures, resp[namespace]["deployments"]):
+            if future.result():
+                print(f"{deployment_name} is ready")
+            else:
+                return Response({'message': 'Timeout: Deployment did not start within the specified time.'}, status=400)
+
+        return Response({'objects_created': resp, "port": custom_variables["port"]})
         
 
 class PodDeleteView(APIView):

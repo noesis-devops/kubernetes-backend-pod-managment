@@ -24,3 +24,5 @@ spec:
               value: "4442"
             - name: SE_EVENT_BUS_SUBSCRIBE_PORT
               value: "4443"
+            - name: SE_NODE_SESSION_TIMEOUT
+              value: "{{ se_node_session_timeout }}"
