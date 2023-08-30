@@ -142,11 +142,6 @@ class PodCreateView(APIView):
                 break  # If service creation succeeds, exit the loop
             except client.exceptions.ApiException as e:
                 succeeds = False
-                print("eeeeeeeeeee")
-                print("eeeeeeeeeee")
-                print("eeeeeeeeeee")
-                print(e)
-                print(e.body)
                 if e.status == 422 and "port is already allocated" in e.body:
                     print({'message': e.body})
                 else:
@@ -163,11 +158,6 @@ class PodCreateView(APIView):
             succeeds = True
         except client.exceptions.ApiException as e:
                 succeeds = False
-                print("eeeeeeeeeee")
-                print("eeeeeeeeeee")
-                print("eeeeeeeeeee")
-                print(e)
-                print(e.body)
                 if e.status == 422 and "port is already allocated" in e.body:
                     print({'message': e.body})
                 else:
