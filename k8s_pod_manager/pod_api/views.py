@@ -8,25 +8,30 @@ from kubernetes import client, config
 from jinja2 import Template
 from pathlib import Path
 import yaml
-from concurrent.futures import ThreadPoolExecutor
 import time
 
 config.load_incluster_config()
 
-def wait_for_deployment_ready(api_instance, namespace, deployment_name):
-        timeout = 120
-        start_time = time.time()
-        while time.time() - start_time < timeout:
-            try:
-                deployment = api_instance.read_namespaced_deployment(deployment_name, namespace)
-                print(deployment)
-                if deployment.status.ready_replicas == deployment.spec.replicas:
-                    return True  # All replicas are ready
-            except client.exceptions.ApiException as e:
-                if e.status == 404:
-                    return False  # Deployment not found
-            time.sleep(2)
-        return False  # Timeout reached
+def wait_for_deployment_ready(apps_api, namespace, deployment_name, timeout_seconds=80):
+    start_time = time.time()
+
+    while True:
+        deployment = apps_api.read_namespaced_deployment(deployment_name, namespace)
+        print("deployment.status.ready_replicas")
+        print(deployment.status.ready_replicas)
+        print("deployment.spec.replicas")
+        print(deployment.spec.replicas)
+        if deployment.status.ready_replicas == deployment.spec.replicas:
+            print(f"Deployment {deployment_name} is ready.")
+            return True
+
+        if time.time() - start_time > timeout_seconds:
+            print(f"Timeout reached while waiting for deployment {deployment_name} to be ready.")
+            return False
+
+        time.sleep(5)  # Wait for 5 seconds before checking again
+
+    return False  # In case of unexpected exit from the loop
 
 class PodManagement:
     def get_pods_in_namespace(self, namespace):
@@ -162,18 +167,13 @@ class PodCreateView(APIView):
                 print(f"'{service}' deleted successfully.")
             return Response({'deleted': resp})
         
-        threads = []
-        with ThreadPoolExecutor(max_workers=2) as executor:
-            for deployment in resp[namespace]["deployments"]:
-                threads.append(executor.submit(wait_for_deployment_ready, apps_api, namespace, deployment))
-
-        for thread, deployment_name in zip(threads, resp[namespace]["deployments"]):
-            if thread.result():
-                print(f"{deployment_name} is ready")
-            else:
-                return Response({'message': 'Timeout: Deployment did not start within the specified time.'}, status=400)
-
-        return Response({'objects_created': resp, "port": custom_variables["port"]})
+            selenium_hub_deployment_ready = wait_for_deployment_ready(apps_api, namespace, f'selenium-hub-{custom_variables["port"]}', timeout_seconds=120)
+            node_chrome_deployment_ready = wait_for_deployment_ready(apps_api, namespace, f'chrome-{custom_variables["port"]}', timeout_seconds=120)
+            
+            if selenium_hub_deployment_ready and node_chrome_deployment_ready:
+            return Response({'objects_created': resp, "port": custom_variables["port"]})
+        else:
+            return Response({'message': 'Deployments did not become ready within the timeout.'}, status=500)
         
 
 class PodDeleteView(APIView):
