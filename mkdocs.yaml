@@ -2,6 +2,7 @@ site_name: 'Kubernetes Pod Management | Docs'
 
 nav:
   - Home: index.md
+  - Getting Started: getting_started.md
 
 plugins:
   - techdocs-core
