@@ -40,6 +40,6 @@ spec:
         - containerPort: 8000
           name: django-api
         resources: {}
-      imagePullSecrets:
-        {{ toYaml .Values.deployment.ntxKubernetesPodManagement.imagePullSecrets | indent 8 }}
+      imagePullSecrets: 
+        - name: {{ .Values.deployment.ntxKubernetesPodManagement.imagePullSecrets }}
       serviceAccountName: {{ include "ntx-kubernetes-pod-management.fullname" . }}-account
