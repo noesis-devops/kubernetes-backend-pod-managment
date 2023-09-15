@@ -34,11 +34,12 @@ spec:
         image: {{ .Values.deployment.ntxKubernetesPodManagement.image.repository }}:{{
           .Values.deployment.ntxKubernetesPodManagement.image.tag | default .Chart.AppVersion
           }}
-        imagePullPolicy: {{ .Values.deployment.ntxKubernetesPodManagement.imagePullPolicy
-          }}
+        imagePullPolicy: {{ .Values.deployment.ntxKubernetesPodManagement.imagePullPolicy  }}
         name: ntx-kubernetes-pod-management
         ports:
         - containerPort: 8000
           name: django-api
         resources: {}
+      imagePullSecrets:
+        {{ toYaml .Values.imagePullSecrets | indent 8 }}
       serviceAccountName: {{ include "ntx-kubernetes-pod-management.fullname" . }}-account
