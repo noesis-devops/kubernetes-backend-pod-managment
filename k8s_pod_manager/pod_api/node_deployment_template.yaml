@@ -30,8 +30,11 @@ spec:
           image: {{ selenium_node_video_image }}
           volumes:
             - /home/user1/videos:/videos
+            - /tmp/.X11-unix/:/tmp/.X11-unix/
           env:
             - name: DISPLAY_CONTAINER_NAME
               value: node-{{ port }}
             - name: FILE_NAME
               value: node-{{ port }}.mp4
+            - name: DISPLAY
+              value: ":0"
