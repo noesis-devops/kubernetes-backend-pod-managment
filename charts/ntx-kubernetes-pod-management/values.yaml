@@ -4,8 +4,8 @@ account:
 deployment:
   ntxKubernetesPodManagement:
     image:
-      repository: docker.io/leandrofrs/kubernetes-pods-api-management
-      tag: 1.1.5
+      repository: ghcr.io/noesis-devops/kubernetes-backend-pod-managment
+      tag: 1.1.6
     imagePullPolicy: Always
   replicas: 1
 kubernetesClusterDomain: cluster.local
