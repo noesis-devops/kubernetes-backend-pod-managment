@@ -41,5 +41,5 @@ spec:
           name: django-api
         resources: {}
       imagePullSecrets:
-        {{ toYaml .Values.imagePullSecrets | indent 8 }}
+        {{ toYaml .Values.deployment.ntxKubernetesPodManagement.imagePullSecrets | indent 8 }}
       serviceAccountName: {{ include "ntx-kubernetes-pod-management.fullname" . }}-account
