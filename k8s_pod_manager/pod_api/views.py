@@ -201,24 +201,37 @@ class PodCreateView(APIView):
             
         return Response({'objects_created': resp, "port": custom_variables["port"]})
 
-        
-
 class PodDeleteView(APIView):
-    def delete(self, request):
+    def delete(self, request, namespace, port):
         config.load_incluster_config()
 
         # Create Kubernetes API client
         core_api = client.CoreV1Api()
         apps_api = client.AppsV1Api()
+        pod_data = []
         # Delete deployments and services
         try:
-            for namespace in request.data:
-                for deployment in request.data[namespace]["deployments"]:
+            # Listar todos os Deployments no namespace
+            deployments = apps_api.list_namespaced_deployment(namespace)
+            deployments_deleted = []
+            for deployment in deployments.items:
+                if f"-{port}" in deployment.metadata.name:
+                    # Apagar o Deployment
                     resp = apps_api.delete_namespaced_deployment(deployment, namespace)
                     print(resp)
-                for service in request.data[namespace]["services"]:
+                    deployments_deleted.append(deployment.metadata.name)
+            pod_data.append({'deployments': deployments_deleted})
+
+            # Listar todos os Services no namespace
+            services = core_api.list_namespaced_service(namespace)
+            services_deleted = []
+            for service in services.items:
+                if f"-{port}" in service.metadata.name:
+                    # Apagar o Service
                     resp = core_api.delete_namespaced_service(service, namespace)
                     print(resp)
-            return Response({'Deleted': request.data})
+                    services_deleted.append(service.metadata.name)
+            pod_data.append({'services': deployments_deleted})
+            return Response({'Deleted': pod_data})
         except client.rest.ApiException as e:
             return Response({'message': f'Error deleting: {str(e)}'}, status=400)
