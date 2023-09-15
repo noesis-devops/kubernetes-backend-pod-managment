@@ -31,5 +31,7 @@ spec:
           volumes:
             - /home/user1/videos:/videos
           env:
-            - DISPLAY_CONTAINER_NAME=node-{{ port }}
-            - FILE_NAME=node-{{ port }}.mp4
+            - name: DISPLAY_CONTAINER_NAME
+              value: node-{{ port }}
+            - name: FILE_NAME
+              value: node-{{ port }}.mp4
