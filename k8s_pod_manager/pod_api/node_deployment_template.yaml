@@ -26,3 +26,10 @@ spec:
               value: "4443"
             - name: SE_NODE_SESSION_TIMEOUT
               value: "{{ se_node_session_timeout }}"
+        - name: node-{{ port }}-video
+          image: {{ selenium_node_video_image }}
+          volumes:
+            - /home/user1/videos:/videos
+          env:
+            - DISPLAY_CONTAINER_NAME=node-{{ port }}
+            - FILE_NAME=node-{{ port }}.mp4
