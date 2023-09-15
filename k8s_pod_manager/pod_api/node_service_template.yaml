@@ -1,10 +1,10 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: chrome-{{ port }}-service
+  name: node-{{ port }}-service
 spec:
   selector:
-    app: chrome-{{ port }}
+    app: node-{{ port }}
   ports:
     - protocol: TCP
       port: 5555  # Assuming Chrome's debug port

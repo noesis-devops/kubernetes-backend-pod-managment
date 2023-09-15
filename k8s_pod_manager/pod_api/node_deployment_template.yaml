@@ -1,20 +1,20 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: chrome-{{ port }}
+  name: node-{{ port }}
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: chrome-{{ port }}
+      app: node-{{ port }}
   template:
     metadata:
       labels:
-        app: chrome-{{ port }}
+        app: node-{{ port }}
     spec:
       containers:
-        - name: chrome-{{ port }}
-          image: {{ selenium_node_chrome_image }}
+        - name: node-{{ port }}
+          image: {{ selenium_node_image }}
           ports:
             - containerPort: 5555  # Assuming Chrome's debug port
           env:

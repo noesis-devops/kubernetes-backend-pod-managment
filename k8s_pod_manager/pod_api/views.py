@@ -102,13 +102,13 @@ class PodCreateView(APIView):
             return Response({'message': 'Invalid port-range values: start_port must be less than end_port'}, status=400)
 
         default_selenium_hub_image = 'selenium/hub:4.1.2'
-        default_selenium_node_chrome_image = 'selenium/node-chrome:4.1.2'
+        default_selenium_node_image = 'selenium/node-chrome:4.1.2'
         default_se_node_session_timeout = 300  # Default timeout in seconds
 
         custom_variables = {
             'port': port_range,
             'selenium_hub_image': request.data.get('selenium-hub-image', default_selenium_hub_image),
-            'selenium_node_chrome_image': request.data.get('selenium-node-chrome-image', default_selenium_node_chrome_image),
+            'selenium_node_image': request.data.get('selenium-node-image', default_selenium_node_image),
             'se_node_session_timeout': request.data.get('se_node_session_timeout', default_se_node_session_timeout)
         }
         
@@ -144,10 +144,10 @@ class PodCreateView(APIView):
                     print(f"An error occurred creating service {api_response.metadata.name}:", e)
                                
 
-        template_path = Path(__file__).with_name('node_chrome_service_template.yaml')
-        rendered_node_chrome_service_template = self.substitute_tokens_in_yaml(template_path, custom_variables)
+        template_path = Path(__file__).with_name('node_service_template.yaml')
+        rendered_node_service_template = self.substitute_tokens_in_yaml(template_path, custom_variables)
         try:
-            api_response = core_api.create_namespaced_service(namespace=namespace, body=yaml.safe_load(rendered_node_chrome_service_template))
+            api_response = core_api.create_namespaced_service(namespace=namespace, body=yaml.safe_load(rendered_node_service_template))
             resp[namespace]["services"].append(api_response.metadata.name)
             print(f"Service {api_response.metadata.name} created successfully.")
             succeeds = True
@@ -173,9 +173,9 @@ class PodCreateView(APIView):
                 print(f"An error occurred creating deployment {api_response.metadata.name}:", e)
         
         try:
-            template_path = Path(__file__).with_name('node_chrome_deployment_template.yaml')
-            rendered_node_chrome_deployment_template = self.substitute_tokens_in_yaml(template_path, custom_variables)
-            api_response = apps_api.create_namespaced_deployment(namespace, yaml.safe_load(rendered_node_chrome_deployment_template))
+            template_path = Path(__file__).with_name('node_deployment_template.yaml')
+            rendered_node_deployment_template = self.substitute_tokens_in_yaml(template_path, custom_variables)
+            api_response = apps_api.create_namespaced_deployment(namespace, yaml.safe_load(rendered_node_deployment_template))
             resp[namespace]["deployments"].append(api_response.metadata.name)
             print(f"Deployment {api_response.metadata.name} created successfully.")
             succeeds = True
