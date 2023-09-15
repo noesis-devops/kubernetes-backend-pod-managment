@@ -104,11 +104,13 @@ class PodCreateView(APIView):
         default_selenium_hub_image = 'selenium/hub:4.1.2'
         default_selenium_node_image = 'selenium/node-chrome:4.1.2'
         default_se_node_session_timeout = 300  # Default timeout in seconds
-
+        default_selenium_node_video_image = 'selenium/video:ffmpeg-4.3.1-20230607'
+        
         custom_variables = {
             'port': port_range,
             'selenium_hub_image': request.data.get('selenium-hub-image', default_selenium_hub_image),
             'selenium_node_image': request.data.get('selenium-node-image', default_selenium_node_image),
+            'selenium_node_video_image': request.data.get('selenium-node-video-image', default_selenium_node_video_image),
             'se_node_session_timeout': request.data.get('se_node_session_timeout', default_se_node_session_timeout)
         }
         
