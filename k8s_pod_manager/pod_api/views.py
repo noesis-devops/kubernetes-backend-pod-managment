@@ -7,8 +7,7 @@ from rest_framework.response import Response
 from kubernetes import client, config
 from jinja2 import Template
 from pathlib import Path
-import yaml
-import time
+import yaml, time, re
 
 config.load_incluster_config()
 
