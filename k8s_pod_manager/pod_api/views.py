@@ -228,31 +228,33 @@ class PodDeleteViewURL(APIView):
         # Create Kubernetes API client
         core_api = client.CoreV1Api()
         apps_api = client.AppsV1Api()
-        pod_data = []
-        # Delete deployments and services
+        
+        pod_data = {"deployments": [], "services": []}
+        
+        # Define a regular expression pattern to match valid port values
+        port_pattern = re.compile(r'^\d{1,5}$')
+        
+        # Validate the port input
+        if not port_pattern.match(port):
+            return Response({'message': 'Invalid port value'}, status=status.HTTP_400_BAD_REQUEST)
+
         try:
-            # Listar todos os Deployments no namespace
+            # Delete matching deployments
             deployments = apps_api.list_namespaced_deployment(namespace)
-            deployments_deleted = []
             for deployment in deployments.items:
                 if f"-{port}" in deployment.metadata.name:
-                    # Apagar o Deployment
-                    resp = apps_api.delete_namespaced_deployment(deployment, namespace)
+                    resp = apps_api.delete_namespaced_deployment(deployment.metadata.name, namespace)
+                    pod_data["deployments"].append(deployment.metadata.name)
                     print(resp)
-                    deployments_deleted.append(deployment.metadata.name)
-            pod_data.append({'deployments': deployments_deleted})
 
-            # Listar todos os Services no namespace
+            # Delete matching services
             services = core_api.list_namespaced_service(namespace)
-            services_deleted = []
             for service in services.items:
                 if f"-{port}" in service.metadata.name:
-                    # Apagar o Service
-                    resp = core_api.delete_namespaced_service(service, namespace)
+                    resp = core_api.delete_namespaced_service(service.metadata.name, namespace)
+                    pod_data["services"].append(service.metadata.name)
                     print(resp)
-                    services_deleted.append(service.metadata.name)
-            pod_data.append({'services': deployments_deleted})
-            
+
             return Response({'Deleted': pod_data})
         except client.rest.ApiException as e:
-            return Response({'message': f'Error deleting: {str(e)}'}, status=400)
+            return Response({'message': f'Error deleting: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
