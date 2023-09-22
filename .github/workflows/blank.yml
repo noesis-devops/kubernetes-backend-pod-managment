@@ -7,13 +7,14 @@ on:
   workflow_dispatch:
   # Triggers the workflow on push or pull request events but only for the "main" branch
   push:
-    branches: [ "main" ]
+    branches: [ "main", "record_video" ]
   #pull_request:
   #  branches: [ "feature-*" ]
 
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
+  IMAGE_VIDEO_NAME: selenium/video
 
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
@@ -54,10 +55,17 @@ jobs:
         uses: docker/metadata-action@9ec57ed1fcdbf14dcef7dfbe97b2010124a938b7
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-      - run: echo "${{ steps.meta.outputs.labels }}"
-      - run: echo "${{ steps.meta.outputs.tags }}"
       -
-        name: Build and push
+        name: Build and push video image
+        uses: docker/build-push-action@v4
+        with:
+          context: ./video
+          file: ./video/Dockerfile
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_VIDEO_NAME }}:1.0.0
+          labels: ${{ steps.meta.outputs.labels }}
+      -
+        name: Build and push API image
         uses: docker/build-push-action@v4
         with:
           context: .
