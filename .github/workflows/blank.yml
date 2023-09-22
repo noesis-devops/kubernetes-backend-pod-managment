@@ -55,15 +55,15 @@ jobs:
         uses: docker/metadata-action@9ec57ed1fcdbf14dcef7dfbe97b2010124a938b7
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-      -
-        name: Build and push video image
-        uses: docker/build-push-action@v4
-        with:
-          context: ./video
-          file: ./video/Dockerfile
-          push: true
-          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/${{ env.IMAGE_VIDEO_NAME }}:1.0.0
-          labels: ${{ steps.meta.outputs.labels }}
+      #-
+      #  name: Build and push video image
+      #  uses: docker/build-push-action@v4
+      #  with:
+      #    context: ./video
+      #    file: ./video/Dockerfile
+      #    push: true
+      #    tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/${{ env.IMAGE_VIDEO_NAME }}:1.0.0
+      #    labels: ${{ steps.meta.outputs.labels }}
       -
         name: Build and push API image
         uses: docker/build-push-action@v4
@@ -71,7 +71,7 @@ jobs:
           context: .
           file: ./k8s_pod_manager/Dockerfile
           push: true
-          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:1.1.13
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:1.1.14
           labels: ${{ steps.meta.outputs.labels }}
   #deployment:
   #  runs-on: ubuntu-latest
