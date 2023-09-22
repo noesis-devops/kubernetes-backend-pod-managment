@@ -7,9 +7,7 @@ from rest_framework.response import Response
 from kubernetes import client, config
 from jinja2 import Template
 from pathlib import Path
-from pyhelm.chartbuilder import ChartBuilder
-from pyhelm.tiller import Tiller
-import yaml, time, re
+import yaml, time, re, subprocess
 
 config.load_incluster_config()
 
