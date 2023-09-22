@@ -119,7 +119,7 @@ class PodCreateView(APIView):
         try:
             config.load_incluster_config()
             install_dependencies = ["helm", "dependency", "build"]
-            subprocess.Popen("(install_dependencies", cwd="/app/selenium-grid-chart")
+            subprocess.Popen(install_dependencies, cwd="/app/selenium-grid-chart")
             #subprocess.run(install_dependencies, check=True)
             # Run the Helm install command to deploy the chart
             helm_install = ["helm", "install", chart_install_name, chart_install_path, "--namespace", chart_namespace, "--atomic"]
