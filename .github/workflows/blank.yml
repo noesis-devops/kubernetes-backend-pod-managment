@@ -62,7 +62,7 @@ jobs:
           context: ./video
           file: ./video/Dockerfile
           push: true
-          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_VIDEO_NAME }}:1.0.0
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/${{ env.IMAGE_VIDEO_NAME }}:1.0.0
           labels: ${{ steps.meta.outputs.labels }}
       -
         name: Build and push API image
