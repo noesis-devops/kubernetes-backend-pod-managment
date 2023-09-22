@@ -11,9 +11,12 @@ WORKDIR /app
 # Copy requirements and install
 COPY ./k8s_pod_manager/requirements.txt /app/
 RUN pip install --no-cache-dir -r requirements.txt
+RUN mkdir -p /app/charts
 
 # Copy the rest of the application
 COPY ./k8s_pod_manager/. /app/
+
+COPY ./charts/selenium-grid/. /app/selenium-grid-chart/
 
 # Expose the port the application runs on
 EXPOSE 8000

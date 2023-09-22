@@ -7,6 +7,8 @@ from rest_framework.response import Response
 from kubernetes import client, config
 from jinja2 import Template
 from pathlib import Path
+from pyhelm.chartbuilder import ChartBuilder
+from pyhelm.tiller import Tiller
 import yaml, time, re
 
 config.load_incluster_config()
@@ -115,6 +117,14 @@ class PodCreateView(APIView):
         }
         
         return namespace, start_port, end_port, custom_variables
+    def deploy_helm_chart(chart_name, chart_install_path, chart_namespace):
+        try:
+            # Run the Helm install command to deploy the chart
+            cmd = ["helm", "install", chart_install_name, chart_install_path, "--namespace", chart_namespace]
+            subprocess.run(cmd, check=True)
+            return {"status": "success", "message": f"Helm chart {chart_name} deployed successfully."}
+        except subprocess.CalledProcessError as e:
+            return {"status": "error", "message": f"Error deploying Helm chart: {e.stderr.decode('utf-8')}"}
     def post(self, request):
         # Load Kubernetes configuration
         config.load_incluster_config()
@@ -128,79 +138,17 @@ class PodCreateView(APIView):
         
         api_response = None
         
+        
+        
         for port in range(start_port, end_port):
             custom_variables["port"] = port
-            template_path = Path(__file__).with_name('selenium_hub_service_template.yaml')
-            rendered_selenium_hub_service_template = self.substitute_tokens_in_yaml(template_path, custom_variables)
-            try:
-                api_response = core_api.create_namespaced_service(namespace=namespace, body=yaml.safe_load(rendered_selenium_hub_service_template))
-                resp[namespace]["services"].append(api_response.metadata.name)
-                print(f"Service {api_response.metadata.name} created successfully.")
-                succeeds = True
-                break  # If service creation succeeds, exit the loop
-            except client.exceptions.ApiException as e:
-                succeeds = False
-                if e.status == 422 and "port is already allocated" in e.body:
-                    print({'message': e.body})
-                else:
-                    print(f"An error occurred creating service {api_response.metadata.name}:", e)
-                               
-
-        template_path = Path(__file__).with_name('node_service_template.yaml')
-        rendered_node_service_template = self.substitute_tokens_in_yaml(template_path, custom_variables)
-        try:
-            api_response = core_api.create_namespaced_service(namespace=namespace, body=yaml.safe_load(rendered_node_service_template))
-            resp[namespace]["services"].append(api_response.metadata.name)
-            print(f"Service {api_response.metadata.name} created successfully.")
-            succeeds = True
-        except client.exceptions.ApiException as e:
-                succeeds = False
-                if e.status == 422 and "port is already allocated" in e.body:
-                    print({'message': e.body})
-                else:
-                    print(f"An error occurred creating service {api_response.metadata.name}:", e)
-        
-        try:
-            template_path = Path(__file__).with_name('selenium_hub_deployment_template.yaml')
-            rendered_selenium_hub_deployment_template = self.substitute_tokens_in_yaml(template_path, custom_variables)
-            api_response = apps_api.create_namespaced_deployment(namespace, yaml.safe_load(rendered_selenium_hub_deployment_template))
-            resp[namespace]["deployments"].append(api_response.metadata.name)
-            print(f"Deployment {api_response.metadata.name} created successfully.")
-            succeeds = True
-        except client.exceptions.ApiException as e:
-            succeeds = False
-            if e.status == 409 and e.reason == "AlreadyExists":
-                print(f"message: {e.message}")
-            else:
-                print(f"An error occurred creating deployment {api_response.metadata.name}:", e)
-        
-        try:
-            template_path = Path(__file__).with_name('node_deployment_template.yaml')
-            rendered_node_deployment_template = self.substitute_tokens_in_yaml(template_path, custom_variables)
-            api_response = apps_api.create_namespaced_deployment(namespace, yaml.safe_load(rendered_node_deployment_template))
-            resp[namespace]["deployments"].append(api_response.metadata.name)
-            print(f"Deployment {api_response.metadata.name} created successfully.")
-            succeeds = True
-        except client.exceptions.ApiException as e:
-            succeeds = False
-            if e.status == 409 and e.reason == "AlreadyExists":
-                print(f"Deployment {api_response.metadata.name} already exists.")
-            else:
-                print(f"An error occurred creating deployment {api_response.metadata.name}:", e)
-        
-        if succeeds == False:
-            delete_deployment_and_service(resp)
-            return Response({'message': f'Deployments or services cannot be created: {resp}'}, status=500)
-        
-        for deployment in resp[namespace]["deployments"]:
-            ready = wait_for_deployment_ready(apps_api, namespace, deployment, timeout_seconds=80)
-            if ready:
-                continue
-            else:
-                delete_deployment_and_service(resp)
-                return Response({'message': f'Deployment {deployment} did not become ready within the timeout.'}, status=500)
+            # Example usage
+            result = deploy_helm_chart(f"selenium-grid-{port}", /app/selenium-grid-chart, namespace)
+            print(result)
+            break
+           
             
-        return Response({'objects_created': resp, "port": custom_variables["port"]})
+        return Response({'objects_created': result})
 
 class PodDeleteView(APIView):
     def delete(self, request):
