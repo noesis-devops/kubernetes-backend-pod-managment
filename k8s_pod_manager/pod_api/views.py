@@ -143,7 +143,7 @@ class PodCreateView(APIView):
         for port in range(start_port, end_port):
             custom_variables["port"] = port
             # Example usage
-            result = deploy_helm_chart(f"selenium-grid-{port}", /app/selenium-grid-chart, namespace)
+            result = deploy_helm_chart(f"selenium-grid-{port}", "/app/selenium-grid-chart", namespace)
             print(result)
             break
            
