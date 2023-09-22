@@ -104,7 +104,7 @@ class PodCreateView(APIView):
         default_selenium_hub_image = 'selenium/hub:4.1.2'
         default_selenium_node_image = 'selenium/node-chrome:4.1.2'
         default_se_node_session_timeout = 300  # Default timeout in seconds
-        default_selenium_node_video_image = 'selenium/video:ffmpeg-4.3.1-20230607'
+        default_selenium_node_video_image = 'ghcr.io/noesis-devops/kubernetes-backend-pod-managment/selenium/video:1.0.0'
         
         custom_variables = {
             'port': port_range,
