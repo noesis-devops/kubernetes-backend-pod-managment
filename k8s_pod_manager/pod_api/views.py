@@ -115,7 +115,7 @@ class PodCreateView(APIView):
         }
         
         return namespace, start_port, end_port, custom_variables
-    def deploy_helm_chart(self, chart_name, chart_install_path, chart_namespace):
+    def deploy_helm_chart(self, chart_install_name, chart_install_path, chart_namespace):
         try:
             # Run the Helm install command to deploy the chart
             cmd = ["helm", "install", chart_install_name, chart_install_path, "--namespace", chart_namespace]
