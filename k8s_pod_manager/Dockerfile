@@ -16,6 +16,14 @@ RUN mkdir -p /app/charts
 # Copy the rest of the application
 COPY ./k8s_pod_manager/. /app/
 
+# Install dependencies and Helm
+RUN apt-get update && apt-get install -y \
+    curl \
+    && rm -rf /var/lib/apt/lists/* \
+    && curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3 \
+    && chmod +x get_helm.sh \
+    && ./get_helm.sh
+
 COPY ./charts/selenium-grid/. /app/selenium-grid-chart/
 
 # Expose the port the application runs on

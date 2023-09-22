@@ -117,8 +117,9 @@ class PodCreateView(APIView):
         return namespace, start_port, end_port, custom_variables
     def deploy_helm_chart(self, chart_install_name, chart_install_path, chart_namespace):
         try:
+            config.load_incluster_config()
             # Run the Helm install command to deploy the chart
-            cmd = ["helm", "install", chart_install_name, chart_install_path, "--namespace", chart_namespace]
+            cmd = ["helm", "install", chart_install_name, chart_install_path, "--namespace", chart_namespace, "--atomic"]
             subprocess.run(cmd, check=True)
             return {"status": "success", "message": f"Helm chart {chart_name} deployed successfully."}
         except subprocess.CalledProcessError as e:
