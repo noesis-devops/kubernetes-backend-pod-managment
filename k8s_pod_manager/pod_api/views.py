@@ -137,6 +137,8 @@ class PodCreateView(APIView):
         except subprocess.CalledProcessError as e:
             if "provided port is already allocated" in e.stderr and str(port) in e.stderr:
                 return {"status": "retry", "message": f"Port {port} is already allocated."}
+            elif "cannot re-use a name that is still in use" in e.stderr:
+                return {"status": "retry", "message": f"name already in use."}
             else:
                 raise e
         except Exception as e:
