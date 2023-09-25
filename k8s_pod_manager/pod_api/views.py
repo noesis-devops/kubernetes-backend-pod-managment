@@ -122,7 +122,9 @@ class PodCreateView(APIView):
             #subprocess.Popen(install_dependencies, cwd="/app/selenium-grid-chart")
             #subprocess.run(install_dependencies, check=True)
             # Run the Helm install command to deploy the chart
-            helm_install = ["helm", "install", chart_install_name, chart_install_path, "--namespace", chart_namespace, "--set", f"hub.nodePort={port}", "--debug", "--atomic"]
+            helm_install = ["helm", "install", chart_install_name, chart_install_path, "--namespace", chart_namespace, 
+                            "--set", f"hub.nodePort={port}", "--set", f"busConfigMap.name=selenium-event-bus-config-{port}",
+                            "--set", f"nodeConfigMap.name=selenium-node-config-{port}", "--debug", "--atomic"]
             subprocess.run(helm_install, check=True)
             return {"status": "success", "message": f"Helm chart {chart_install_name} deployed successfully."}
         except subprocess.CalledProcessError as e:
