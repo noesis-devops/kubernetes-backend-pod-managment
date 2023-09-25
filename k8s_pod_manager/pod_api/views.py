@@ -194,7 +194,7 @@ class PodDeleteView(APIView):
             return Response({'message': f'Error deleting: {str(e)}'}, status=400)
 
 class PodDeleteViewURL(APIView):
-     def delete_helm_chart_deployment(self, chart_name, chart_namespace):
+    def delete_helm_chart_deployment(self, chart_name, chart_namespace):
         try:
             config.load_incluster_config()
             helm_delete = ["helm", "delete", chart_name, "--namespace", chart_namespace]
