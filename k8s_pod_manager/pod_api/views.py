@@ -116,25 +116,23 @@ class PodCreateView(APIView):
         
         return namespace, start_port, end_port, custom_variables
     def deploy_helm_chart(self, chart_install_name, chart_install_path, chart_namespace, port):
-        try:
-            config.load_incluster_config()
-            #install_dependencies = ["helm", "dependency", "build"]
-            #subprocess.Popen(install_dependencies, cwd="/app/selenium-grid-chart")
-            #subprocess.run(install_dependencies, check=True)
-            # Run the Helm install command to deploy the chart
-            helm_install = ["helm", "install", chart_install_name, chart_install_path, "--namespace", chart_namespace, 
-                            "--set", f"hub.nodePort={port}", "--set", f"busConfigMap.name=selenium-event-bus-config-{port}",
-                            "--set", f"videoRecorder.nameOverride=selenium-video-{port}",
-                            "--set", f"nodeConfigMap.name=selenium-node-config-{port}", "--debug", "--atomic"]
-            completed_process = subprocess.run(helm_install, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=True)
-            output = completed_process.stdout
-            error_output = completed_process.stderr
-            return {"status": "success", "message": f"Helm chart {chart_install_name} deployed successfully."}
-        except subprocess.CalledProcessError as e:
-            raise e
-        except Exception as e:
-            # Handle other exceptions without causing script to fail
-            return({"error": str(e)})
+        config.load_incluster_config()
+        #install_dependencies = ["helm", "dependency", "build"]
+        #subprocess.Popen(install_dependencies, cwd="/app/selenium-grid-chart")
+        #subprocess.run(install_dependencies, check=True)
+        # Run the Helm install command to deploy the chart
+        helm_install = ["helm", "install", chart_install_name, chart_install_path, "--namespace", chart_namespace, 
+                        "--set", f"hub.nodePort={port}", "--set", f"busConfigMap.name=selenium-event-bus-config-{port}",
+                        "--set", f"videoRecorder.nameOverride=selenium-video-{port}",
+                        "--set", f"nodeConfigMap.name=selenium-node-config-{port}", "--debug", "--atomic"]
+        completed_process = subprocess.run(helm_install, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=True)
+        output = completed_process.stdout
+        error_output = completed_process.stderr
+        print("completed_process")
+        print(completed_process)
+        if "error_output" in completed_process and "provided port is already allocated" in output and port in output:
+            return {"status": "port_already_allocated", "message": f"{port} provided port is already allocated"}    
+        return {"status": "success", "message": f"Helm chart {chart_install_name} deployed successfully."}
     def post(self, request):
         # Load Kubernetes configuration
         config.load_incluster_config()
@@ -155,11 +153,10 @@ class PodCreateView(APIView):
                 # Example usage
                 result = self.deploy_helm_chart(f"selenium-grid-{port}", "/app/selenium-grid-chart", namespace, port)
                 print(result)
-                if "error" in result and "provided port is already allocated" in result.error_output and port in result.error_output:
+                if result.status == "port_already_allocated":
                     continue
                 service_created = True
                 return Response({'objects_created': result})
-                break
             if not service_created:
                 raise Exception("Error creating deployment!")
         except Exception as e:
