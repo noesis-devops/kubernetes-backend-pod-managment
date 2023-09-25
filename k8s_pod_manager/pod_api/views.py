@@ -88,6 +88,9 @@ class PodCreateView(APIView):
         namespace = request.data.get('namespace')
         if namespace is None:
             namespace = 'ntx'
+        record_video = request.data.get('record_video')
+        if record_video is None:
+            record_video = False
         port_range = request.data.get('port-range')
         if port_range is None:
             return Response({'message': 'Missing port-range in request'}, status=400)
@@ -115,13 +118,17 @@ class PodCreateView(APIView):
         }
         
         return namespace, start_port, end_port, custom_variables
-    def deploy_helm_chart(self, chart_install_name, chart_install_path, chart_namespace, port):
+    def deploy_helm_chart(self, chart_install_name, chart_install_path, chart_namespace, port, record_video=False):
         try:
             config.load_incluster_config()
-            helm_install = ["helm", "install", chart_install_name, chart_install_path, "--namespace", chart_namespace, 
+            helm_install = ["helm", "install", chart_install_name, chart_install_path, "--namespace", chart_install_name, 
                             "--set", f"hub.nodePort={port}", "--set", f"busConfigMap.name=selenium-event-bus-config-{port}",
                             "--set", f"videoRecorder.nameOverride=selenium-video-{port}",
-                            "--set", f"nodeConfigMap.name=selenium-node-config-{port}", "--debug", "--atomic"]
+                            "--set", f"nodeConfigMap.name=selenium-node-config-{port}", "--debug", "--atomic" "--create-namespace"]
+            if record_video:
+                helm_install.extend(["--set", "videoRecorder.enabled=true"])
+            else:
+                helm_install.extend(["--set", "videoRecorder.enabled=false"])
             completed_process = subprocess.run(helm_install, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=True)
             output = completed_process.stdout
             error_output = completed_process.stderr
@@ -138,23 +145,18 @@ class PodCreateView(APIView):
     def post(self, request):
         # Load Kubernetes configuration
         config.load_incluster_config()
-        namespace, start_port, end_port, custom_variables = self.set_custom_variables(request)
+        namespace, start_port, end_port, custom_variables, record_video = self.set_custom_variables(request)
         core_api = client.CoreV1Api()
         apps_api = client.AppsV1Api()
         
-        resp = {namespace: {"deployments": [], "services": []}}
-        
-        succeeds = False
-        
-        api_response = None
-        
+
         service_created = False
         try:
             error_message = None
             for port in range(start_port, end_port):
                 custom_variables["port"] = port
                 # Example usage
-                result = self.deploy_helm_chart(f"selenium-grid-{port}", "/app/selenium-grid-chart", namespace, port)
+                result = self.deploy_helm_chart(f"selenium-grid-{port}", "/app/selenium-grid-chart", namespace, port, record_video)
                 print(result)
                 if "status" in result and result["status"] == "retry":
                     # Port is already allocated, try the next port
