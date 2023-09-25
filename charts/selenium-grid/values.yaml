@@ -5,7 +5,7 @@ global:
     # Image tag for browser's nodes
     nodesImageTag: 4.12.1-20230912
     # Pull secret for all components, can be overridden individually
-    imagePullSecret: ""    
+    imagePullSecret: "dockerconfigjson-github-com"    
 
 # Basic auth settings for Selenium Grid
 basicAuth:
@@ -263,7 +263,7 @@ hub:
   # Image pull policy (see https://kubernetes.io/docs/concepts/containers/images/#updating-images)
   imagePullPolicy: IfNotPresent
   # Image pull secret (see https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/)
-  imagePullSecret: "dockerconfigjson-github-com"
+  imagePullSecret: ""
 
   # Custom annotations for Selenium Hub pods
   annotations: {}
