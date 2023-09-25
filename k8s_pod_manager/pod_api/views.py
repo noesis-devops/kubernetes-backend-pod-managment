@@ -127,7 +127,7 @@ class PodCreateView(APIView):
             error_output = completed_process.stderr
             return {"status": "success", "message": f"Helm chart {chart_install_name} deployed successfully."}
         except subprocess.CalledProcessError as e:
-            if "provided port is already allocated" in e.stderr and {port} in e.stderr:
+            if "provided port is already allocated" in e.stderr and str(port) in e.stderr:
                 return {"status": "retry", "message": f"Port {port} is already allocated."}
             else:
                 raise e
