@@ -194,15 +194,23 @@ class PodDeleteView(APIView):
             return Response({'message': f'Error deleting: {str(e)}'}, status=400)
 
 class PodDeleteViewURL(APIView):
+     def delete_helm_chart_deployment(self, chart_name, chart_namespace):
+        try:
+            config.load_incluster_config()
+            helm_delete = ["helm", "delete", chart_name, "--namespace", chart_namespace]
+            completed_process = subprocess.run(helm_delete, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=True)
+            output = completed_process.stdout
+            error_output = completed_process.stderr
+            return {"status": "success", "message": f"Helm chart {chart_name} deleted successfully."}
+        except subprocess.CalledProcessError as e:
+            return {"status": "error", "message": f"{e.stderr}"}
     def delete(self, request, namespace, port):
         config.load_incluster_config()
 
         # Create Kubernetes API client
         core_api = client.CoreV1Api()
         apps_api = client.AppsV1Api()
-        
-        pod_data = {"deployments": [], "services": []}
-        
+                
         # Define a regular expression pattern to match valid port values
         port_pattern = re.compile(r'^\d{1,5}$')
         
@@ -211,22 +219,8 @@ class PodDeleteViewURL(APIView):
             return Response({'message': 'Invalid port value'}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            # Delete matching deployments
-            deployments = apps_api.list_namespaced_deployment(namespace)
-            for deployment in deployments.items:
-                if f"-{port}" in deployment.metadata.name:
-                    resp = apps_api.delete_namespaced_deployment(deployment.metadata.name, namespace)
-                    pod_data["deployments"].append(deployment.metadata.name)
-                    print(resp)
-
-            # Delete matching services
-            services = core_api.list_namespaced_service(namespace)
-            for service in services.items:
-                if f"-{port}" in service.metadata.name:
-                    resp = core_api.delete_namespaced_service(service.metadata.name, namespace)
-                    pod_data["services"].append(service.metadata.name)
-                    print(resp)
-
-            return Response({'Deleted': pod_data})
+            # Delete matching helm charts
+            result = self.delete_helm_chart_deployment(f"selenium-grid-{port}", namespace)
+            return Response(result)
         except client.rest.ApiException as e:
             return Response({'message': f'Error deleting: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
