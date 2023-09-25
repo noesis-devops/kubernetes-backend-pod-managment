@@ -150,6 +150,7 @@ class PodCreateView(APIView):
         
         service_created = False
         try:
+            error_message = None
             for port in range(start_port, end_port):
                 custom_variables["port"] = port
                 # Example usage
