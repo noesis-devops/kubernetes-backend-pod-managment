@@ -126,13 +126,15 @@ class PodCreateView(APIView):
                             "--set", f"hub.nodePort={port}", "--set", f"busConfigMap.name=selenium-event-bus-config-{port}",
                             "--set", f"videoRecorder.nameOverride=selenium-video-{port}",
                             "--set", f"nodeConfigMap.name=selenium-node-config-{port}", "--debug", "--atomic"]
-            subprocess.run(helm_install, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=True)
+            completed_process = subprocess.run(helm_install, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=True)
+            output = completed_process.stdout
+            error_output = completed_process.stderr
             return {"status": "success", "message": f"Helm chart {chart_install_name} deployed successfully."}
         except subprocess.CalledProcessError as e:
-            print({"status": "error", "message": f"Error deploying Helm chart: {e.stderr}", "code": {e.returncode}})
+            raise e
         except Exception as e:
             # Handle other exceptions without causing script to fail
-            return({"status": "error", "message": f"Error deploying Helm chart: {e.stderr}", "code": {e.returncode}})
+            return({"error": str(e)})
     def post(self, request):
         # Load Kubernetes configuration
         config.load_incluster_config()
@@ -146,16 +148,19 @@ class PodCreateView(APIView):
         
         api_response = None
         
+        service_created = False
         for port in range(start_port, end_port):
             custom_variables["port"] = port
             # Example usage
             result = self.deploy_helm_chart(f"selenium-grid-{port}", "/app/selenium-grid-chart", namespace, port)
             print(result)
-            if "provided port is already allocated" in result.message and port in result.message:
+            if "error" in result and "provided port is already allocated" in result.error_output and port in result.error_output:
                 continue
+            service_created = True
             break
-           
-            
+        if not service_created:
+            except client.rest.ApiException as e:
+                return Response({'message': f'Error creating deployment!'}, status=400)
         return Response({'objects_created': result})
 
 class PodDeleteView(APIView):
