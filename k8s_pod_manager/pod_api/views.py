@@ -149,18 +149,20 @@ class PodCreateView(APIView):
         api_response = None
         
         service_created = False
-        for port in range(start_port, end_port):
-            custom_variables["port"] = port
-            # Example usage
-            result = self.deploy_helm_chart(f"selenium-grid-{port}", "/app/selenium-grid-chart", namespace, port)
-            print(result)
-            if "error" in result and "provided port is already allocated" in result.error_output and port in result.error_output:
-                continue
-            service_created = True
-            break
-        if not service_created:
-            except client.rest.ApiException as e:
-                return Response({'message': f'Error creating deployment!'}, status=400)
+        try:
+            for port in range(start_port, end_port):
+                custom_variables["port"] = port
+                # Example usage
+                result = self.deploy_helm_chart(f"selenium-grid-{port}", "/app/selenium-grid-chart", namespace, port)
+                print(result)
+                if "error" in result and "provided port is already allocated" in result.error_output and port in result.error_output:
+                    continue
+                service_created = True
+                break
+            if not service_created:
+                raise Exception("Error creating deployment!")
+            except Exception as e:
+                print(f"An error occurred: {e}")
         return Response({'objects_created': result})
 
 class PodDeleteView(APIView):
