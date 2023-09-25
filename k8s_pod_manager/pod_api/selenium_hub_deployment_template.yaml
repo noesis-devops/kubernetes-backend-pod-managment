@@ -2,7 +2,6 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: selenium-hub-{{ port }}
-  namespace: ntx
 spec:
   replicas: 1
   selector:
