@@ -162,7 +162,7 @@ class PodCreateView(APIView):
                 break
             if not service_created:
                 raise Exception("Error creating deployment!")
-        return Response({'objects_created': result})
+            return Response({'objects_created': result})
         except Exception as e:
             print(f"An error occurred: {e}")
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
