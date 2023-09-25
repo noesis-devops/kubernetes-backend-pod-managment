@@ -2,7 +2,7 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ template "seleniumGrid.hub.fullname" . }}-{{ .Values.hub.nodePort }}
+  name: {{ template "seleniumGrid.hub.fullname" . }}
   namespace: {{ .Release.Namespace }}
   labels:
     app: selenium-hub
@@ -23,7 +23,6 @@ spec:
   {{- end }}
   ports:
     - name: http-hub
-      nodePort: {{ .Values.hub.nodePort }}
       protocol: TCP
       port: {{ .Values.hub.port }}
       targetPort: {{ .Values.hub.port }}

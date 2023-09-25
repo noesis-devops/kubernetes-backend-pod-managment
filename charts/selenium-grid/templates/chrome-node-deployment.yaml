@@ -2,7 +2,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ template "seleniumGrid.chromeNode.fullname" . }}-{{ .Values.hub.nodePort }}
+  name: {{ template "seleniumGrid.chromeNode.fullname" . }}
   namespace: {{ .Release.Namespace }}
   labels:
     app: selenium-chrome-node

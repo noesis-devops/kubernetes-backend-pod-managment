@@ -2,7 +2,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ template "seleniumGrid.hub.fullname" . }}-{{ .Values.hub.nodePort }}
+  name: {{ template "seleniumGrid.hub.fullname" . }}
   namespace: {{ .Release.Namespace }}
   labels: &hub_labels
     app: selenium-hub

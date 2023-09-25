@@ -5,7 +5,7 @@ global:
     # Image tag for browser's nodes
     nodesImageTag: 4.12.1-20230912
     # Pull secret for all components, can be overridden individually
-    imagePullSecret: "dockerconfigjson-github-com"    
+    imagePullSecret: ""    
 
 # Basic auth settings for Selenium Grid
 basicAuth:
@@ -326,7 +326,6 @@ hub:
   securityContext: {}
   # Kubernetes service type (see https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types)
   serviceType: NodePort
-  nodePort: 32002
   # Set specific loadBalancerIP when serviceType is LoadBalancer (see https://kubernetes.io/docs/concepts/services-networking/service/#loadbalancer)
   loadBalancerIP: ""
   # Custom annotations for Selenium Hub service
@@ -528,10 +527,10 @@ firefoxNode:
   resources:
     requests:
       memory: "1Gi"
-      cpu: "0.5"
+      cpu: "1"
     limits:
       memory: "1Gi"
-      cpu: "0.5"
+      cpu: "1"
   # SecurityContext for firefox-node container
   securityContext: {}
   # Custom host aliases for firefox nodes
@@ -646,10 +645,10 @@ edgeNode:
   resources:
     requests:
       memory: "1Gi"
-      cpu: "0.5"
+      cpu: "1"
     limits:
       memory: "1Gi"
-      cpu: "0.5"
+      cpu: "1"
   # SecurityContext for edge-node container
   securityContext: {}
   # Custom host aliases for edge nodes
@@ -733,12 +732,13 @@ videoRecorder:
   # Where to upload the video file. Should be set to something like 's3://myvideobucket/'
   uploadDestinationPrefix: "video_"
   # What uploader to use. See .videRecorder.s3 for how to create a new one.
-  uploader: s3
+  uploader: ""
 
   # Image of video recorder
   imageTag: 1.0.1
   # Image pull policy (see https://kubernetes.io/docs/concepts/containers/images/#updating-images)
   imagePullPolicy: IfNotPresent
+
   ports:
     - 5666
   resources:
@@ -760,6 +760,7 @@ videoRecorder:
   # Wait for pod startup
   terminationGracePeriodSeconds: 30
   volume:
+    # - "/home/user1/videos:/videos"
     emptyDir: {}
   s3:
     imageName: public.ecr.aws/bitnami/aws-cli
