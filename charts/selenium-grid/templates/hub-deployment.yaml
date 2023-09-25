@@ -29,8 +29,6 @@ spec:
     spec:
       serviceAccountName: {{ template "seleniumGrid.serviceAccount.fullname" . }}
       serviceAccount: {{ template  "seleniumGrid.serviceAccount.fullname" . }}
-      imagePullSecrets: 
-        - name: {{ .Values.hub.imagePullSecrets }}
       containers:
         - name: selenium-hub
           {{- $imageTag := default .Values.global.seleniumGrid.imageTag .Values.hub.imageTag }}

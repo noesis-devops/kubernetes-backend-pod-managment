@@ -263,7 +263,7 @@ hub:
   # Image pull policy (see https://kubernetes.io/docs/concepts/containers/images/#updating-images)
   imagePullPolicy: IfNotPresent
   # Image pull secret (see https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/)
-  imagePullSecret: ""
+  imagePullSecret: "dockerconfigjson-github-com"
 
   # Custom annotations for Selenium Hub pods
   annotations: {}
@@ -739,7 +739,6 @@ videoRecorder:
   imageTag: 1.0.0
   # Image pull policy (see https://kubernetes.io/docs/concepts/containers/images/#updating-images)
   imagePullPolicy: IfNotPresent
-  imagePullSecrets: dockerconfigjson-github-com
   ports:
     - 5666
   resources:
