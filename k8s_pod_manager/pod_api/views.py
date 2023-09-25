@@ -156,8 +156,7 @@ class PodCreateView(APIView):
             succeeds = True
         except client.exceptions.ApiException as e:
             succeeds = False
-            else:
-                print(f"An error occurred creating service {api_response.metadata.name}:", e)
+            print(f"An error occurred creating service {api_response.metadata.name}:", e)
 
         template_path = Path(__file__).with_name('node_service_template.yaml')
         rendered_node_service_template = self.substitute_tokens_in_yaml(template_path, custom_variables)
