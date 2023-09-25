@@ -222,14 +222,14 @@ class PodDeleteViewURL(APIView):
         
         # Validate the port input
         if not port_pattern.match(port):
-            return Response({'message': 'Invalid port value'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'message': 'Invalid port value'}, status=400)
         string = "selenium-grid-" + port
         pattern = re.compile(r"selenium-grid-" + port)
         if not pattern.match(namespace):
-            return Response({'message': 'You cannot delete this objet!'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'message': 'You cannot delete this objet!'}, status=400)
         try:
             # Delete matching helm charts
             result = self.delete_helm_chart_deployment(f"selenium-grid-{port}", namespace)
             return Response(result)
         except client.rest.ApiException as e:
-            return Response({'message': f'Error deleting: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({'message': f'Error deleting: {str(e)}'}, status=500)

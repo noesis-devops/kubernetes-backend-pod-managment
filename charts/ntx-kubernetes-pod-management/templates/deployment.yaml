@@ -42,5 +42,5 @@ spec:
         resources: {}
       imagePullSecrets: 
         - name: {{ .Values.deployment.ntxKubernetesPodManagement.imagePullSecrets }}
-      #serviceAccountName: {{ include "ntx-kubernetes-pod-management.fullname" . }}-account
-      serviceAccountName: helm-manager
+      serviceAccountName: {{ include "ntx-kubernetes-pod-management.fullname" . }}-account
+      #serviceAccountName: helm-manager

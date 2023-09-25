@@ -1,85 +1,13 @@
 apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
+kind: ClusterRole
 metadata:
   name: {{ include "ntx-kubernetes-pod-management.fullname" . }}-pod-reader
   labels:
   {{- include "ntx-kubernetes-pod-management.labels" . | nindent 4 }}
 rules:
-- apiGroups:
-  - ""
-  resources:
-  - pods
-  verbs:
-  - get
-  - watch
-  - list
-  - create
-  - delete
-- apiGroups:
-  - apps
-  resources:
-  - deployments
-  verbs:
-  - create
-  - delete
-  - list
-  - get
-  - watch
-- apiGroups:
-  - ""
-  resources:
-  - services
-  verbs:
-  - create
-  - delete
-  - list
-  - get
-  - watch
-- apiGroups:
-  - ""
-  resources: 
-  - serviceaccounts
-  verbs: 
-  - create
-  - get
-  - list
-  - delete
-- apiGroups:
-  - ""
-  resources:
-  - configmaps
-  verbs: 
-  - get
-  - list
-  - create
-  - update
-  - watch
-  - delete
-- apiGroups:
-  - "networking.k8s.io"
-  resources: 
-  - "ingresses"
-  verbs: 
-  - create
-  - get
-  - list
-  - delete
-- apiGroups:
-  - ""
-  resources: 
-  - "secrets"
-  verbs: 
-  - create
-  - get
-  - list
-  - delete
-- apiGroups:
-  - apps
-  resources:
-  - replicasets
-  verbs:
-  - create
-  - delete
-  - list
-  - get
-  - watch
+- apiGroups: [""]
+  resources: ["configmaps", "deployments", "services", "secrets", "namespaces", "pods", "serviceaccounts"]
+  verbs: ["create", "get", "list", "update", "delete", "watch"]
+- apiGroups: ["apps"]
+  resources: ["configmaps", "deployments", "services", "secrets", "replicasets", "pods"]
+  verbs: ["create", "get", "list", "update", "delete", "watch"]
