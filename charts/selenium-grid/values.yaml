@@ -736,7 +736,7 @@ videoRecorder:
   uploader: s3
 
   # Image of video recorder
-  imageTag: 1.0.0
+  imageTag: 1.0.1
   # Image pull policy (see https://kubernetes.io/docs/concepts/containers/images/#updating-images)
   imagePullPolicy: IfNotPresent
   ports:
