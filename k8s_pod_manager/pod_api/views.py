@@ -124,11 +124,12 @@ class PodCreateView(APIView):
             helm_install = ["helm", "install", chart_install_name, chart_install_path, "--namespace", chart_install_name, 
                             "--set", f"hub.nodePort={port}", "--set", f"busConfigMap.name=selenium-event-bus-config-{port}",
                             "--set", f"videoRecorder.nameOverride=selenium-video-{port}",
-                            "--set", f"nodeConfigMap.name=selenium-node-config-{port}", "--debug", "--atomic", "--create-namespace"]
+                            "--set", f"nodeConfigMap.name=selenium-node-config-{port}"]
             if record_video:
                 helm_install.extend(["--set", "videoRecorder.enabled=true"])
             else:
                 helm_install.extend(["--set", "videoRecorder.enabled=false"])
+            helm_install.extend(["--debug", "--atomic", "--create-namespace"])
             completed_process = subprocess.run(helm_install, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=True)
             output = completed_process.stdout
             error_output = completed_process.stderr
