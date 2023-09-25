@@ -158,12 +158,13 @@ class PodCreateView(APIView):
                 if "error" in result and "provided port is already allocated" in result.error_output and port in result.error_output:
                     continue
                 service_created = True
+                return Response({'objects_created': result})
                 break
             if not service_created:
                 raise Exception("Error creating deployment!")
         except Exception as e:
             print(f"An error occurred: {e}")
-        return Response({'objects_created': result})
+        
 
 class PodDeleteView(APIView):
     def delete(self, request):
