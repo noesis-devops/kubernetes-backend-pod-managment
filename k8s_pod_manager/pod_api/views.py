@@ -152,7 +152,7 @@ class PodCreateView(APIView):
         try:
             api_response = core_api.create_namespaced_config_map(namespace=namespace, body=yaml.safe_load(rendered_video_config_map_template))
             #resp[namespace]["services"].append(api_response.metadata.name)
-            print(f"Config Map video-cm-{custom_variables["port"]} created successfully.")
+            print(f"Config Map video-cm-{custom_variables['port']} created successfully.")
             succeeds = True
         except client.exceptions.ApiException as e:
             succeeds = False
