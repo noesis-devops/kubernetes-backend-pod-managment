@@ -19,5 +19,4 @@ spec:
       port: 4443
       targetPort: 4443
       name: subscribe
-
   type: NodePort

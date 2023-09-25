@@ -23,4 +23,26 @@ spec:
               name: subscribe
             - containerPort: 4444
               name: hub
+          livenessProbe:
+            httpGet:
+              path: /readyz
+              port: 4444
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 10
+            successThreshold: 1
+            failureThreshold: 10
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 4444
+            initialDelaySeconds: 12
+            periodSeconds: 10
+            timeoutSeconds: 10
+            successThreshold: 1
+            failureThreshold: 10
+          env:
+            - name: SE_SUB_PATH
+              value: /
+
 

@@ -104,7 +104,7 @@ class PodCreateView(APIView):
         default_selenium_hub_image = 'selenium/hub:4.1.2'
         default_selenium_node_image = 'selenium/node-chrome:4.1.2'
         default_se_node_session_timeout = 300  # Default timeout in seconds
-        default_selenium_node_video_image = 'selenium/video:ffmpeg-4.3.1-20230607'
+        default_selenium_node_video_image = 'ghcr.io/noesis-devops/kubernetes-backend-pod-managment/selenium/video:1.0.1'
         
         custom_variables = {
             'port': port_range,
@@ -128,6 +128,7 @@ class PodCreateView(APIView):
         
         api_response = None
         
+        
         for port in range(start_port, end_port):
             custom_variables["port"] = port
             template_path = Path(__file__).with_name('selenium_hub_service_template.yaml')
@@ -145,6 +146,18 @@ class PodCreateView(APIView):
                 else:
                     print(f"An error occurred creating service {api_response.metadata.name}:", e)
                                
+
+        template_path = Path(__file__).with_name('video-cm.yaml')
+        rendered_video_config_map_template = self.substitute_tokens_in_yaml(template_path, custom_variables)
+        try:
+            api_response = core_api.create_namespaced_config_map(namespace=namespace, body=yaml.safe_load(rendered_video_config_map_template))
+            #resp[namespace]["services"].append(api_response.metadata.name)
+            print(f"Config Map video-cm-{custom_variables["port"]} created successfully.")
+            succeeds = True
+        except client.exceptions.ApiException as e:
+            succeeds = False
+            else:
+                print(f"An error occurred creating service {api_response.metadata.name}:", e)
 
         template_path = Path(__file__).with_name('node_service_template.yaml')
         rendered_node_service_template = self.substitute_tokens_in_yaml(template_path, custom_variables)

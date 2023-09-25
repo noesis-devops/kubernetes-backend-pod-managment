@@ -17,6 +17,16 @@ spec:
           image: {{ selenium_node_image }}
           ports:
             - containerPort: 5555  # Assuming Chrome's debug port
+          volumeMounts:
+            - name: dshm
+              mountPath: /dev/shm
+          resources:
+            limits:
+              cpu: "0.5"
+              memory: 1Gi
+            requests:
+              cpu: "0.5"
+              memory: 1Gi
           env:
             - name: SE_EVENT_BUS_HOST
               value: selenium-hub-{{ port }}-service
@@ -28,13 +38,44 @@ spec:
               value: "{{ se_node_session_timeout }}"
         - name: node-{{ port }}-video
           image: {{ selenium_node_video_image }}
-          volumes:
-            - /home/user1/videos:/videos
-            - /tmp/.X11-unix/:/tmp/.X11-unix/
+          imagePullPolicy: IfNotPresent
           env:
-            - name: DISPLAY_CONTAINER_NAME
-              value: node-{{ port }}
-            - name: FILE_NAME
-              value: node-{{ port }}.mp4
-            - name: DISPLAY
-              value: ":0"
+          - name: UPLOAD_DESTINATION_PREFIX
+            value: video_
+          - name: SE_EVENT_BUS_HOST
+            value: selenium-hub-{{ port }}-service
+          - name: SE_EVENT_BUS_PUBLISH_PORT
+            value: "4442"
+          - name: SE_EVENT_BUS_SUBSCRIBE_PORT
+            value: "4443"
+          - name: SE_NODE_SESSION_TIMEOUT
+            value: "{{ se_node_session_timeout }}"
+          ports:
+          - containerPort: 5666
+            protocol: TCP
+          volumeMounts:
+          - name: dshm
+            mountPath: /dev/shm
+          - name: video-scripts
+            mountPath: /opt/bin/video.sh
+            subPath: video.sh
+          - name: video
+            mountPath: /videos
+          resources:
+            limits:
+              cpu: "0.5"
+              memory: 1Gi
+            requests:
+              cpu: "0.5"
+              memory: 1Gi
+      volumes:
+        - name: dshm
+          emptyDir:
+            medium: Memory
+            sizeLimit: 1Gi
+        - name: video-scripts
+          configMap:
+            name: selenium-video-{{ port }}
+            defaultMode: 0500
+        - name: video
+          emptyDir: {}
