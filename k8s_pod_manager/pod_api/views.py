@@ -118,10 +118,6 @@ class PodCreateView(APIView):
     def deploy_helm_chart(self, chart_install_name, chart_install_path, chart_namespace, port):
         try:
             config.load_incluster_config()
-            #install_dependencies = ["helm", "dependency", "build"]
-            #subprocess.Popen(install_dependencies, cwd="/app/selenium-grid-chart")
-            #subprocess.run(install_dependencies, check=True)
-            # Run the Helm install command to deploy the chart
             helm_install = ["helm", "install", chart_install_name, chart_install_path, "--namespace", chart_namespace, 
                             "--set", f"hub.nodePort={port}", "--set", f"busConfigMap.name=selenium-event-bus-config-{port}",
                             "--set", f"videoRecorder.nameOverride=selenium-video-{port}",
@@ -131,11 +127,14 @@ class PodCreateView(APIView):
             error_output = completed_process.stderr
             return {"status": "success", "message": f"Helm chart {chart_install_name} deployed successfully."}
         except subprocess.CalledProcessError as e:
-            raise e
+            if "provided port is already allocated" in e.stderr and {port} in e.stderr:
+                return {"status": "retry", "message": f"Port {port} is already allocated."}
+            else:
+                raise e
         except Exception as e:
             # Handle other exceptions without causing script to fail
             print(f"An error occurred: {e}")
-            return({"error": str(e)})
+            return {"error": str(e)}
     def post(self, request):
         # Load Kubernetes configuration
         config.load_incluster_config()
@@ -156,16 +155,22 @@ class PodCreateView(APIView):
                 # Example usage
                 result = self.deploy_helm_chart(f"selenium-grid-{port}", "/app/selenium-grid-chart", namespace, port)
                 print(result)
-                if "error" in result and "provided port is already allocated" in result.error and port in result.error:
+                if "status" in result and result["status"] == "retry":
+                    # Port is already allocated, try the next port
                     continue
-                service_created = True
-                break
+                elif "error" in result:
+                    error_message = result["error"]
+                else:
+                    service_created = True
+                    break
             if not service_created:
                 raise Exception("Error creating deployment!")
+            if error_message:
+                return Response({"error": error_message}, status=500)
             return Response({'objects_created': result})
         except Exception as e:
             print(f"An error occurred: {e}")
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({"error": str(e)}, status=500)
 
 class PodDeleteView(APIView):
     def delete(self, request):
