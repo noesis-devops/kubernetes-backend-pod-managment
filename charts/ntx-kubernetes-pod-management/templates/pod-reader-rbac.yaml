@@ -40,8 +40,10 @@ rules:
   resources: 
   - serviceaccounts
   verbs: 
+  - create
   - get
   - list
+  - delete
 - apiGroups:
   - ""
   resources:
@@ -52,16 +54,22 @@ rules:
   - create
   - update
   - watch
+  - delete
 - apiGroups:
   - "networking.k8s.io"
   resources: 
   - "ingresses"
   verbs: 
-  - "get"
-  - "list"
+  - create
+  - get
+  - list
+  - delete
 - apiGroups:
   - ""
   resources: 
   - "secrets"
   verbs: 
-  - "create"
+  - create
+  - get
+  - list
+  - delete

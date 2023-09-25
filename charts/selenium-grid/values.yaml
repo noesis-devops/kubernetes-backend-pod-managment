@@ -728,7 +728,7 @@ edgeNode:
 
 videoRecorder:
   # Image of video recorder
-  imageName: ghcr.io/noesis-devops/selenium/video
+  imageName: ghcr.io/noesis-devops/kubernetes-backend-pod-managment/selenium/video:1.0.0
   enabled: true
   # Where to upload the video file. Should be set to something like 's3://myvideobucket/'
   uploadDestinationPrefix: "video_"

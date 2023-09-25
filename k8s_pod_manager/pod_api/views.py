@@ -115,14 +115,14 @@ class PodCreateView(APIView):
         }
         
         return namespace, start_port, end_port, custom_variables
-    def deploy_helm_chart(self, chart_install_name, chart_install_path, chart_namespace):
+    def deploy_helm_chart(self, chart_install_name, chart_install_path, chart_namespace, port):
         try:
             config.load_incluster_config()
             #install_dependencies = ["helm", "dependency", "build"]
             #subprocess.Popen(install_dependencies, cwd="/app/selenium-grid-chart")
             #subprocess.run(install_dependencies, check=True)
             # Run the Helm install command to deploy the chart
-            helm_install = ["helm", "install", chart_install_name, chart_install_path, "--namespace", chart_namespace, "--atomic"]
+            helm_install = ["helm", "install", chart_install_name, chart_install_path, "--namespace", chart_namespace, "--set", f"hub.nodePort={port}", "--debug", "--atomic"]
             subprocess.run(helm_install, check=True)
             return {"status": "success", "message": f"Helm chart {chart_name} deployed successfully."}
         except subprocess.CalledProcessError as e:
@@ -145,7 +145,7 @@ class PodCreateView(APIView):
         for port in range(start_port, end_port):
             custom_variables["port"] = port
             # Example usage
-            result = self.deploy_helm_chart(f"selenium-grid-{port}", "/app/selenium-grid-chart", namespace)
+            result = self.deploy_helm_chart(f"selenium-grid-{port}", "/app/selenium-grid-chart", namespace, port)
             print(result)
             break
            
