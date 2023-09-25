@@ -739,7 +739,7 @@ videoRecorder:
   imageTag: 1.0.0
   # Image pull policy (see https://kubernetes.io/docs/concepts/containers/images/#updating-images)
   imagePullPolicy: IfNotPresent
-
+  imagePullSecrets: dockerconfigjson-github-com
   ports:
     - 5666
   resources:
