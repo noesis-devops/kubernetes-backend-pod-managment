@@ -129,7 +129,10 @@ class PodCreateView(APIView):
             subprocess.run(helm_install, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=True)
             return {"status": "success", "message": f"Helm chart {chart_install_name} deployed successfully."}
         except subprocess.CalledProcessError as e:
-            return {"status": "error", "message": f"Error deploying Helm chart: {e.stderr}", "code": {e.returncode}}
+            print({"status": "error", "message": f"Error deploying Helm chart: {e.stderr}", "code": {e.returncode}})
+        except Exception as e:
+            # Handle other exceptions without causing script to fail
+            return({"status": "error", "message": f"Error deploying Helm chart: {e.stderr}", "code": {e.returncode}})
     def post(self, request):
         # Load Kubernetes configuration
         config.load_incluster_config()
