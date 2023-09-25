@@ -161,8 +161,8 @@ class PodCreateView(APIView):
                 break
             if not service_created:
                 raise Exception("Error creating deployment!")
-            except Exception as e:
-                print(f"An error occurred: {e}")
+        except Exception as e:
+            print(f"An error occurred: {e}")
         return Response({'objects_created': result})
 
 class PodDeleteView(APIView):
