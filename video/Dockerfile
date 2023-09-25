@@ -29,6 +29,8 @@ RUN cd /opt/bin && pip install psutil
 
 RUN  mkdir -p /var/run/supervisor /var/log/supervisor /videos
 
+RUN chmod 777 /opt/bin/entry_point.sh && chmod 777 /opt/bin/video.sh && chmod 777 /opt/bin/video_ready.py
+
 ENTRYPOINT ["/opt/bin/entry_point.sh"]
 CMD ["/opt/bin/entry_point.sh"]
 
