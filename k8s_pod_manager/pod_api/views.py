@@ -117,7 +117,7 @@ class PodCreateView(APIView):
             'se_node_session_timeout': request.data.get('se_node_session_timeout', default_se_node_session_timeout)
         }
         
-        return namespace, start_port, end_port, custom_variables
+        return namespace, start_port, end_port, record_video, custom_variables
     def deploy_helm_chart(self, chart_install_name, chart_install_path, chart_namespace, port, record_video=False):
         try:
             config.load_incluster_config()
@@ -145,7 +145,7 @@ class PodCreateView(APIView):
     def post(self, request):
         # Load Kubernetes configuration
         config.load_incluster_config()
-        namespace, start_port, end_port, custom_variables, record_video = self.set_custom_variables(request)
+        namespace, start_port, end_port, record_video, custom_variables = self.set_custom_variables(request)
         core_api = client.CoreV1Api()
         apps_api = client.AppsV1Api()
         

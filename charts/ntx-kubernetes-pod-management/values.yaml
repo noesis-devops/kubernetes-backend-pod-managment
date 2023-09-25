@@ -5,7 +5,7 @@ deployment:
   ntxKubernetesPodManagement:
     image:
       repository: ghcr.io/noesis-devops/kubernetes-backend-pod-managment
-      tag: 1.1.65
+      tag: 1.1.66
     imagePullPolicy: Always
     imagePullSecrets: dockerconfigjson-github-com
   replicas: 1
