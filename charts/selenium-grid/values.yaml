@@ -21,8 +21,8 @@ isolateComponents: false
 
 # Service Account for all components
 serviceAccount:
-  create: true
-  name: ""
+  create: false
+  name: "api-ntx-kubernetes-pod-management-account"
   annotations: {}
   #  eks.amazonaws.com/role-arn: "arn:aws:iam::12345678:role/video-bucket-permissions"
 

@@ -124,7 +124,7 @@ class PodCreateView(APIView):
             # Run the Helm install command to deploy the chart
             helm_install = ["helm", "install", chart_install_name, chart_install_path, "--namespace", chart_namespace, "--set", f"hub.nodePort={port}", "--debug", "--atomic"]
             subprocess.run(helm_install, check=True)
-            return {"status": "success", "message": f"Helm chart {chart_name} deployed successfully."}
+            return {"status": "success", "message": f"Helm chart {chart_install_name} deployed successfully."}
         except subprocess.CalledProcessError as e:
             return {"status": "error", "message": f"Error deploying Helm chart: {e}"}
     def post(self, request):
