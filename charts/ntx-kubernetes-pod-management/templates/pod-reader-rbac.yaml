@@ -73,3 +73,13 @@ rules:
   - get
   - list
   - delete
+- apiGroups:
+  - apps
+  resources:
+  - replicasets
+  verbs:
+  - create
+  - delete
+  - list
+  - get
+  - watch
