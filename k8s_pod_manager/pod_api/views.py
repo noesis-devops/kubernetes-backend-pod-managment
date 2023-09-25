@@ -118,10 +118,11 @@ class PodCreateView(APIView):
         }
         
         return namespace, start_port, end_port, record_video, custom_variables
-    def deploy_helm_chart(self, chart_install_name, chart_install_path, chart_namespace, port, record_video=False):
-        try:
+    def deploy_helm_chart(self, chart_install_name, chart_install_path, port, record_video=False):
+        chart_namespace = chart_install_name
+        try:            
             config.load_incluster_config()
-            helm_install = ["helm", "install", chart_install_name, chart_install_path, "--namespace", chart_install_name, 
+            helm_install = ["helm", "install", chart_install_name, chart_install_path, "--namespace", chart_namespace, 
                             "--set", f"hub.nodePort={port}", "--set", f"busConfigMap.name=selenium-event-bus-config-{port}",
                             "--set", f"videoRecorder.nameOverride=selenium-video-{port}",
                             "--set", f"nodeConfigMap.name=selenium-node-config-{port}"]
@@ -159,7 +160,7 @@ class PodCreateView(APIView):
             for port in range(start_port, end_port):
                 custom_variables["port"] = port
                 # Example usage
-                result = self.deploy_helm_chart(f"selenium-grid-{port}", "/app/selenium-grid-chart", namespace, port, record_video)
+                result = self.deploy_helm_chart(f"selenium-grid-{port}", "/app/selenium-grid-chart", port, record_video)
                 print(result)
                 if "status" in result and result["status"] == "retry":
                     # Port is already allocated, try the next port
@@ -222,7 +223,10 @@ class PodDeleteViewURL(APIView):
         # Validate the port input
         if not port_pattern.match(port):
             return Response({'message': 'Invalid port value'}, status=status.HTTP_400_BAD_REQUEST)
-
+        string = "selenium-grid-" + port
+        pattern = re.compile(r"selenium-grid-" + port)
+        if not pattern.match(namespace):
+            return Response({'message': 'You cannot delete this objet!'}, status=status.HTTP_400_BAD_REQUEST)
         try:
             # Delete matching helm charts
             result = self.delete_helm_chart_deployment(f"selenium-grid-{port}", namespace)
