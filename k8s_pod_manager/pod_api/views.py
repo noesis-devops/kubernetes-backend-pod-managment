@@ -126,10 +126,10 @@ class PodCreateView(APIView):
                             "--set", f"hub.nodePort={port}", "--set", f"busConfigMap.name=selenium-event-bus-config-{port}",
                             "--set", f"videoRecorder.nameOverride=selenium-video-{port}",
                             "--set", f"nodeConfigMap.name=selenium-node-config-{port}", "--debug", "--atomic"]
-            subprocess.run(helm_install, check=True)
+            subprocess.run(helm_install, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=True)
             return {"status": "success", "message": f"Helm chart {chart_install_name} deployed successfully."}
         except subprocess.CalledProcessError as e:
-            return {"status": "error", "message": f"Error deploying Helm chart: {e}"}
+            return {"status": "error", "message": f"Error deploying Helm chart: {e.stderr}", "code": {e.returncode}}
     def post(self, request):
         # Load Kubernetes configuration
         config.load_incluster_config()
