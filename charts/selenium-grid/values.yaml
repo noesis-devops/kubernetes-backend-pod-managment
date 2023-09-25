@@ -326,6 +326,7 @@ hub:
   securityContext: {}
   # Kubernetes service type (see https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types)
   serviceType: NodePort
+  nodePort: 32002
   # Set specific loadBalancerIP when serviceType is LoadBalancer (see https://kubernetes.io/docs/concepts/services-networking/service/#loadbalancer)
   loadBalancerIP: ""
   # Custom annotations for Selenium Hub service
@@ -732,7 +733,7 @@ videoRecorder:
   # Where to upload the video file. Should be set to something like 's3://myvideobucket/'
   uploadDestinationPrefix: "video_"
   # What uploader to use. See .videRecorder.s3 for how to create a new one.
-  uploader: ""
+  uploader: s3
 
   # Image of video recorder
   imageTag: 1.0.1
