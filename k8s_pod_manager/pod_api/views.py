@@ -143,13 +143,13 @@ class PodCreateView(APIView):
         
         api_response = None
         
-        
-        
         for port in range(start_port, end_port):
             custom_variables["port"] = port
             # Example usage
             result = self.deploy_helm_chart(f"selenium-grid-{port}", "/app/selenium-grid-chart", namespace, port)
             print(result)
+            if "provided port is already allocated" in result.message and port in result.message:
+                continue
             break
            
             
