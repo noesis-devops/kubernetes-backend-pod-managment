@@ -42,10 +42,11 @@ spec:
         resources: {}
         volumeMounts:
         - name: video-volume
-          mountPath: /videos
+          mountPath: /shared-data
       volumes:
       - name: video-volume
-        emptyDir: {}
+        hostPath:
+          path: /shared-data
       imagePullSecrets: 
         - name: {{ .Values.deployment.ntxKubernetesPodManagement.imagePullSecrets }}
       serviceAccountName: {{ include "ntx-kubernetes-pod-management.fullname" . }}-account
