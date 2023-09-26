@@ -293,7 +293,7 @@ class PodDeleteViewURL(APIView):
         try:
             exec_command = ["cat", f"/videos/{file_name}"]
             v1 = client.CoreV1Api()
-            resp = api_instance.connect_get_namespaced_pod_exec(
+            resp = v1.connect_get_namespaced_pod_exec(
             name=pod_name,
             namespace=namespace,
             command=exec_command,
