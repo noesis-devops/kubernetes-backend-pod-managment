@@ -54,6 +54,8 @@ spec:
           - containerPort: 5666
             protocol: TCP
           volumeMounts:
+          - name: shared-volume
+            mountPath: /shared-data
           - name: dshm
             mountPath: /dev/shm
           - name: video-scripts
@@ -69,6 +71,9 @@ spec:
               cpu: "0.5"
               memory: 1Gi
       volumes:
+        - name: shared-volume
+          hostPath:
+            path: /shared-data
         - name: dshm
           emptyDir:
             medium: Memory

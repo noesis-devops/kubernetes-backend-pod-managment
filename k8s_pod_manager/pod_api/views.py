@@ -341,11 +341,11 @@ class PodDeleteViewURL(APIView):
                 file_name = self.get_file_name_pod_exec(pod.metadata.name, container_name, namespace, "ls /videos", core_api)
                 print("file_name")
                 print(file_name)
-                video_bytes = self.copy_video_from_pod(pod.metadata.name, namespace, destination_path, file_name, container_name)
-
-            if video_bytes:
-                with open("/tmp/output_video.mp4", "wb") as output_file:
-                    output_file.write(video_bytes)
+                # Execute a command to copy the video file from the shared volume to a container-accessible location
+                subprocess.run(["cp", f"/shared-data/{file_name}", f"/tmp/{file_name}"], check=True)
+                #video_bytes = self.copy_video_from_pod(pod.metadata.name, namespace, destination_path, file_name, container_name)
+                with open(f"/tmp/{file_name}", "rb") as video_file:
+                    video_bytes = video_file.read()
                 print("Video read and saved successfully.")
             else:
                 print("Error reading video from the pod.")
