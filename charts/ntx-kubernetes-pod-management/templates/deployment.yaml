@@ -40,6 +40,12 @@ spec:
         - containerPort: 8000
           name: django-api
         resources: {}
+        volumeMounts:
+        - name: video-volume
+          mountPath: /videos
+      volumes:
+      - name: video-volume
+        emptyDir: {}
       imagePullSecrets: 
         - name: {{ .Values.deployment.ntxKubernetesPodManagement.imagePullSecrets }}
       serviceAccountName: {{ include "ntx-kubernetes-pod-management.fullname" . }}-account
