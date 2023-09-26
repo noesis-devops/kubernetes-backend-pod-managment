@@ -252,20 +252,38 @@ class PodDeleteViewURL(APIView):
         return filtered_pods
     def copy_video_from_pod(self, pod_name, namespace, destination_path, container_name):
         try:
-            command = f"kubectl exec -it {pod_name} -c {container_name} -n {namespace} -- ls /videos/*.mp4"
-            result = subprocess.run(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            # Load the Kubernetes configuration
+            config.load_incluster_config()
+            # Create an instance of the CoreV1Api
+            core_api = client.CoreV1Api()
+            # Define the command to list .mp4 files in the /videos folder
+            command = ["sh", "-c", "ls /videos"]
             source_path = None
-            if result.returncode == 0:
-                file_list = result.stdout.strip().split('\n')
+            try:
+                # Execute the command inside the pod container
+                resp = core_api.read_namespaced_pod_exec(
+                    name=pod_name,
+                    namespace=namespace,
+                    command=command,
+                    container=container_name,
+                    stderr=True,
+                    stdin=False,
+                    stdout=True,
+                    tty=False,
+                )
+
+                # Process the response to get the file names
+                file_list = resp.strip().split('\n')
                 for file_name in file_list:
                     if ".mp4" in file_name:
                         source_path = file_name
                         print("source_path")
                         print(source_path)
-            else:
-                print(f"Error: {result.stderr}")
-            # Use kubectl cp command to copy the file from the pod to a local directory.
-            subprocess.run(['kubectl', 'cp', f'{namespace}/{pod_name}:{source_path}', destination_path, '-c', container_name], check=True)
+
+            except ApiException as e:
+                print(f"Exception when calling CoreV1Api->read_namespaced_pod_exec: {e}")
+            
+            destination_path = "/videos/"+ source_path
             
             # Read the copied file as bytes.
             with open(destination_path, "rb") as video_file:
