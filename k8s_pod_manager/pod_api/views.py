@@ -298,22 +298,14 @@ class PodDeleteViewURL(APIView):
             ]
             v1 = client.CoreV1Api()
             resp = stream(v1.connect_get_namespaced_pod_exec, pod_name, namespace, command=exec_command, container=container_name, stderr=True, stdin=True, stdout=True, tty=False)
-            with open('/tmp/file.tar', 'wb') as file:
-                for chunk in resp.read_stdout():
-                    file.write(chunk)
-            print("gravei o file.tar")
-            with tarfile.open("/tmp/file.tar", 'r') as tar:
-                tar.extractall("/tmp")
-            print("descompactei o file.tar")
-            # Read the copied file as bytes.
-            with open("/tmp/" + file_name, "rb") as video_file:
-                video_bytes = video_file.read()
-            # Delete the local video file.
-            os.remove("/tmp/" + file_name)
-            os.remove("/tmp/file.tar")
+            # Read the video file as bytes
+            video_bytes = b""
+            for chunk in resp:
+                video_bytes += chunk
+
             return video_bytes
-        except subprocess.CalledProcessError as e:
-            print(f"Error copying file from pod: {e}")
+        except Exception as e:
+            print(f"Error reading video from pod: {e}")
 
     def delete(self, request, namespace, port):
         config.load_incluster_config()
@@ -344,12 +336,13 @@ class PodDeleteViewURL(APIView):
                 video_bytes = self.copy_video_from_pod(pod.metadata.name, namespace, destination_path, file_name, container_name)
 
             if video_bytes:
-                # Now, you have the video as bytes in the 'video_bytes' variable.
+                # Now you have the video content as bytes in the 'video_bytes' variable.
                 # You can use it as needed.
-                print("Video copied, read, and local copy deleted successfully.")
-                print(video_bytes)
+                with open("/tmp/output_video.mp4", "wb") as output_file:
+                    output_file.write(video_bytes)
+                print("Video read and saved successfully.")
             else:
-                print("Error copying, reading, or deleting video.")
+                print("Error reading video from the pod.")
         except:
             return Response({'message': f'Cannot retrieve video: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         try:
