@@ -298,12 +298,13 @@ class PodDeleteViewURL(APIView):
             ]
             v1 = client.CoreV1Api()
             resp = stream(v1.connect_get_namespaced_pod_exec, pod_name, namespace, command=exec_command, container=container_name, stderr=True, stdin=True, stdout=True, tty=False)
-            print(resp)
             with open('/tmp/file.tar', 'wb') as file:
-                file.write(resp)
+                for chunk in resp.read_stdout():
+                    file.write(chunk)
+            print("gravei o file.tar")
             with tarfile.open("/tmp/file.tar", 'r') as tar:
                 tar.extractall("/tmp")
-            
+            print("descompactei o file.tar")
             # Read the copied file as bytes.
             with open("/tmp/" + file_name, "rb") as video_file:
                 video_bytes = video_file.read()
