@@ -18,7 +18,7 @@ spec:
       {{- include "ntx-kubernetes-pod-management.selectorLabels" . | nindent 8 }}
     spec:
       nodeSelector:
-        kubernetes.io/role: controlplane
+        kubernetes.io/hostname: 10.255.0.154
       containers:
       - env:
         - name: KUBERNETES_CLUSTER_DOMAIN
