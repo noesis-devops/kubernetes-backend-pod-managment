@@ -5,6 +5,7 @@ from django.shortcuts import render
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from kubernetes import client, config
+from kubernetes.stream import stream
 from jinja2 import Template
 from pathlib import Path
 import yaml, time, re, os, subprocess, tarfile
