@@ -235,7 +235,7 @@ class PodDeleteView(APIView):
             return Response({'message': f'Error deleting: {str(e)}'}, status=400)
 
 class PodDeleteViewURL(APIView):
-    def get_pods_by_app_label(self, match_label):
+    def get_pods_by_app_label(self, match_label, namespace):
         try:
             api_instance = client.CoreV1Api()
             # List pods in the specified namespace
@@ -299,7 +299,7 @@ class PodDeleteViewURL(APIView):
              # Example usage:
             destination_path = "/tmp/node-" + port + "-video.mp4"  # Local path where the video will be copied
             container_name = "node-"+ port + "-video"
-            pods = self.get_pods_by_app_label("node-"+ port)
+            pods = self.get_pods_by_app_label("node-" + port, namespace)
             for pod in pods: 
                 video_bytes = self.copy_video_from_pod(pod.metadata.name, namespace, destination_path, container_name)
 
