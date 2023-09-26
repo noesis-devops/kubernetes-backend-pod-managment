@@ -7,7 +7,7 @@ from rest_framework.response import Response
 from kubernetes import client, config
 from jinja2 import Template
 from pathlib import Path
-import yaml, time, re, os, subprocess
+import yaml, time, re, os, subprocess, tarfile
 
 config.load_incluster_config()
 
@@ -250,52 +250,60 @@ class PodDeleteViewURL(APIView):
         except Exception as e:
             print(f"Error: {e}")
         return filtered_pods
-    def copy_video_from_pod(self, pod_name, namespace, destination_path, container_name):
-        try:
-            # Load the Kubernetes configuration
-            config.load_incluster_config()
-            # Create an instance of the CoreV1Api
-            core_api = client.CoreV1Api()
-            # Define the command to list .mp4 files in the /videos folder
-            command = ["sh", "-c", "ls /videos"]
-            source_path = None
-            try:
-                # Execute the command inside the pod container
-                resp = core_api.read_namespaced_pod_exec(
-                    name=pod_name,
-                    namespace=namespace,
-                    command=command,
+    def get_file_name_pod_exec(self, name, container_name, namespace, command, api_instance):
+        exec_command = ["/bin/sh", "-c", command]
+
+        resp = stream(api_instance.connect_get_namespaced_pod_exec,
+                    name,
+                    namespace,
+                    command=exec_command,
                     container=container_name,
-                    stderr=True,
-                    stdin=False,
-                    stdout=True,
-                    tty=False,
-                )
+                    stderr=True, stdin=False,
+                    stdout=True, tty=False,
+                    _preload_content=False)
 
-                # Process the response to get the file names
-                file_list = resp.strip().split('\n')
-                for file_name in file_list:
-                    if ".mp4" in file_name:
-                        source_path = file_name
-                        print("source_path")
-                        print(source_path)
+        while resp.is_open():
+            resp.update(timeout=1)
+            if resp.peek_stdout():
+                print(f"STDOUT: \n{resp.read_stdout()}")
+            if resp.peek_stderr():
+                print(f"STDERR: \n{resp.read_stderr()}")
 
-            except ApiException as e:
-                print(f"Exception when calling CoreV1Api->read_namespaced_pod_exec: {e}")
-            
-            destination_path = "/videos/"+ source_path
+        resp.close()
+        
+        file_list = resp.strip().split('\n')
+        for file_name in file_list:
+            if ".mp4" in file_name:
+                source_path = file_name
+                print("source_path")
+                print(source_path)
+                return source_path
+
+        if resp.returncode != 0:
+            raise Exception("Script failed")
+    def copy_video_from_pod(self, pod_name, namespace, file_name, destination_path, container_name):
+        try:
+            exec_command = [
+                '/bin/sh',
+                '-c',
+                f"tar cf - /videos/{file_name}"
+            ]
+            v1 = client.CoreV1Api()
+            resp = stream(v1.connect_get_namespaced_pod_exec, pod_name, namespace, command=exec_command, stderr=True, stdin=True, stdout=True, tty=False)
+            with open('/tmp/file.tar', 'wb') as file:
+                file.write(resp.data)
+            with tarfile.open("/tmp/file.tar", 'r') as tar:
+                tar.extractall("/tmp")
             
             # Read the copied file as bytes.
-            with open(destination_path, "rb") as video_file:
+            with open("/tmp/" + file_name, "rb") as video_file:
                 video_bytes = video_file.read()
-            
             # Delete the local video file.
-            os.remove(destination_path)
-            
+            os.remove("/tmp/" + file_name)
+            os.remove("/tmp/file.tar")
             return video_bytes
         except subprocess.CalledProcessError as e:
             print(f"Error copying file from pod: {e}")
-            return None
 
     def delete(self, request, namespace, port):
         config.load_incluster_config()
@@ -318,8 +326,10 @@ class PodDeleteViewURL(APIView):
             destination_path = "/tmp/node-" + port + "-video.mp4"  # Local path where the video will be copied
             container_name = "node-"+ port + "-video"
             pods = self.get_pods_by_app_label("node-" + port, namespace)
-            for pod in pods: 
-                video_bytes = self.copy_video_from_pod(pod.metadata.name, namespace, destination_path, container_name)
+            video_bytes = None
+            for pod in pods:
+                file_name = self.get_file_name_pod_exec(pod.metadata.name, container_name, namespace, "ls /videos", core_api)
+                video_bytes = self.copy_video_from_pod(pod.metadata.name, namespace, destination_path, file_name, container_name)
 
             if video_bytes:
                 # Now, you have the video as bytes in the 'video_bytes' variable.
