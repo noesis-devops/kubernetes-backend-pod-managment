@@ -17,6 +17,8 @@ spec:
         app: ntx-kubernetes-pod-management
       {{- include "ntx-kubernetes-pod-management.selectorLabels" . | nindent 8 }}
     spec:
+      nodeSelector:
+        kubernetes.io/role: control-plane
       containers:
       - env:
         - name: KUBERNETES_CLUSTER_DOMAIN
