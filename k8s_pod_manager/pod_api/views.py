@@ -295,11 +295,9 @@ class PodDeleteViewURL(APIView):
             v1 = client.CoreV1Api()
             resp = stream(v1.connect_get_namespaced_pod_exec, pod_name, namespace, command=exec_command, container=container_name, stderr=True, stdin=True, stdout=True, tty=False)
             # Read the video file as bytes
-            video_bytes = b""
-            for chunk in resp:
-                video_bytes += chunk.encode("utf-8")
-
+            video_bytes = resp.encode()
             return video_bytes
+
         except Exception as e:
             print(f"Error reading video from pod: {e}")
 
@@ -332,8 +330,6 @@ class PodDeleteViewURL(APIView):
                 video_bytes = self.copy_video_from_pod(pod.metadata.name, namespace, destination_path, file_name, container_name)
 
             if video_bytes:
-                # Now you have the video content as bytes in the 'video_bytes' variable.
-                # You can use it as needed.
                 with open("/tmp/output_video.mp4", "wb") as output_file:
                     output_file.write(video_bytes)
                 print("Video read and saved successfully.")
