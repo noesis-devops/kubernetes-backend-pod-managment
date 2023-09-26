@@ -344,8 +344,8 @@ class PodDeleteViewURL(APIView):
                 with open(f"/shared-data/{file_name}", "rb") as video_file:
                     video_bytes = video_file.read()
                 print("Video read and saved successfully.")
-            else:
-                print("Error reading video from the pod.")
+        print(type(video_bytes))
+        print(video_bytes)
         except:
             return Response({'message': f'Cannot retrieve video: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         try:
