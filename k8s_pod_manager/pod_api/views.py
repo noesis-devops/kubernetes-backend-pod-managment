@@ -9,6 +9,7 @@ from kubernetes.stream import stream
 from jinja2 import Template
 from pathlib import Path
 import yaml, time, re, os, subprocess, tarfile
+from django.http import HttpResponse
 
 config.load_incluster_config()
 
@@ -348,6 +349,8 @@ class PodDeleteViewURL(APIView):
             return Response({'message': f'Cannot retrieve video: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         print(type(video_bytes))
         print(video_bytes)
+        response = HttpResponse(video_bytes, content_type='video/mp4')
+        response['Content-Disposition'] = 'attachment; filename="video.mp4"'
         try:
             # Delete matching deployments
             deployments = apps_api.list_namespaced_deployment(namespace)
@@ -365,6 +368,6 @@ class PodDeleteViewURL(APIView):
                     pod_data["services"].append(service.metadata.name)
                     print(resp)
 
-            return Response({'Deleted': pod_data, "bytes": video_bytes})
+            return response
         except client.rest.ApiException as e:
             return Response({'message': f'Error deleting: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
