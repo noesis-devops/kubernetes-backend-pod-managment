@@ -330,13 +330,13 @@ class PodDeleteViewURL(APIView):
         # Validate the port input
         if not port_pattern.match(port):
             return Response({'message': 'Invalid port value'}, status=status.HTTP_400_BAD_REQUEST)
-
+        video_bytes = None
         try:
              # Example usage:
             destination_path = "/tmp/node-" + port + "-video.mp4"  # Local path where the video will be copied
             container_name = "node-"+ port + "-video"
             pods = self.get_pods_by_app_label("node-" + port, namespace)
-            video_bytes = None
+            
             for pod in pods:
                 file_name = self.get_file_name_pod_exec(pod.metadata.name, container_name, namespace, "ls /videos", core_api)
                 print("file_name")
@@ -344,10 +344,10 @@ class PodDeleteViewURL(APIView):
                 with open(f"/shared-data/{file_name}", "rb") as video_file:
                     video_bytes = video_file.read()
                 print("Video read and saved successfully.")
-        print(type(video_bytes))
-        print(video_bytes)
         except:
             return Response({'message': f'Cannot retrieve video: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        print(type(video_bytes))
+        print(video_bytes)
         try:
             # Delete matching deployments
             deployments = apps_api.list_namespaced_deployment(namespace)
