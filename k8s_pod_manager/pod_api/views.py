@@ -7,7 +7,7 @@ from rest_framework.response import Response
 from kubernetes import client, config
 from jinja2 import Template
 from pathlib import Path
-import yaml, time, re
+import yaml, time, re, os, subprocess
 
 config.load_incluster_config()
 
@@ -235,6 +235,50 @@ class PodDeleteView(APIView):
             return Response({'message': f'Error deleting: {str(e)}'}, status=400)
 
 class PodDeleteViewURL(APIView):
+    def get_pods_by_app_label(self, match_label):
+        try:
+            api_instance = client.CoreV1Api()
+            # List pods in the specified namespace
+            pod_list = api_instance.list_namespaced_pod(namespace=namespace)
+            # Filter pods by the "app" label (assuming your deployment uses this label)
+            filtered_pods = [pod for pod in pod_list.items if pod.metadata.labels.get("app") == match_label]
+            if filtered_pods:
+                for pod in filtered_pods:
+                    print(f"Pod Name: {pod.metadata.name}")
+            else:
+                print(f"No pods found for deployment: {match_label}")
+        except Exception as e:
+            print(f"Error: {e}")
+        return filtered_pods
+    def copy_video_from_pod(self, pod_name, namespace, destination_path, container_name):
+        try:
+            command = f"kubectl exec -it {pod_name} -c {container_name} -n {namespace} -- ls /videos/*.mp4"
+            result = subprocess.run(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            source_path = None
+            if result.returncode == 0:
+                file_list = result.stdout.strip().split('\n')
+                for file_name in file_list:
+                    if ".mp4" in file_name:
+                        source_path = file_name
+                        print("source_path")
+                        print(source_path)
+            else:
+                print(f"Error: {result.stderr}")
+            # Use kubectl cp command to copy the file from the pod to a local directory.
+            subprocess.run(['kubectl', 'cp', f'{namespace}/{pod_name}:{source_path}', destination_path, '-c', container_name], check=True)
+            
+            # Read the copied file as bytes.
+            with open(destination_path, "rb") as video_file:
+                video_bytes = video_file.read()
+            
+            # Delete the local video file.
+            os.remove(destination_path)
+            
+            return video_bytes
+        except subprocess.CalledProcessError as e:
+            print(f"Error copying file from pod: {e}")
+            return None
+
     def delete(self, request, namespace, port):
         config.load_incluster_config()
 
@@ -252,6 +296,23 @@ class PodDeleteViewURL(APIView):
             return Response({'message': 'Invalid port value'}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
+             # Example usage:
+            destination_path = "/tmp/node-" + port + "-video.mp4"  # Local path where the video will be copied
+            container_name = "node-"+ port + "-video"
+            pods = self.get_pods_by_app_label("node-"+ port)
+            for pod in pods: 
+                video_bytes = self.copy_video_from_pod(pod.metadata.name, namespace, destination_path, container_name)
+
+            if video_bytes:
+                # Now, you have the video as bytes in the 'video_bytes' variable.
+                # You can use it as needed.
+                print("Video copied, read, and local copy deleted successfully.")
+                print(video_bytes)
+            else:
+                print("Error copying, reading, or deleting video.")
+        except:
+            return Response({'message': f'Cannot retrieve video: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        try:
             # Delete matching deployments
             deployments = apps_api.list_namespaced_deployment(namespace)
             for deployment in deployments.items:
@@ -268,6 +329,6 @@ class PodDeleteViewURL(APIView):
                     pod_data["services"].append(service.metadata.name)
                     print(resp)
 
-            return Response({'Deleted': pod_data})
+            return Response({'Deleted': pod_data, "bytes": video_bytes})
         except client.rest.ApiException as e:
             return Response({'message': f'Error deleting: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
