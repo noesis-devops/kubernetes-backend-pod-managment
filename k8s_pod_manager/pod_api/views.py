@@ -301,7 +301,7 @@ class PodDeleteViewURL(APIView):
             # Read the video file as bytes
             video_bytes = b""
             for chunk in resp:
-                video_bytes += chunk
+                video_bytes += chunk.encode("utf-8")
 
             return video_bytes
         except Exception as e:
