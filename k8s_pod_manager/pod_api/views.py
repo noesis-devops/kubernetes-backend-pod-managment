@@ -283,7 +283,7 @@ class PodDeleteViewURL(APIView):
 
         if resp.returncode != 0:
             raise Exception("Script failed")
-    def copy_video_from_pod(self, pod_name, namespace, file_name, destination_path, container_name):
+    def copy_video_from_pod(self, pod_name, namespace, destination_path, file_name, container_name):
         try:
             exec_command = [
                 '/bin/sh',
@@ -332,6 +332,8 @@ class PodDeleteViewURL(APIView):
             video_bytes = None
             for pod in pods:
                 file_name = self.get_file_name_pod_exec(pod.metadata.name, container_name, namespace, "ls /videos", core_api)
+                print("file_name")
+                print(file_name)
                 video_bytes = self.copy_video_from_pod(pod.metadata.name, namespace, destination_path, file_name, container_name)
 
             if video_bytes:
