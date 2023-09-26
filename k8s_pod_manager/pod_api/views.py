@@ -291,11 +291,7 @@ class PodDeleteViewURL(APIView):
             raise Exception("Script failed")
     def copy_video_from_pod(self, pod_name, namespace, destination_path, file_name, container_name):
         try:
-            exec_command = [
-                '/bin/sh',
-                '-c',
-                f"tar cf - /videos/{file_name}"
-            ]
+            exec_command = ["cat", f"/videos/{file_name}"]
             v1 = client.CoreV1Api()
             resp = stream(v1.connect_get_namespaced_pod_exec, pod_name, namespace, command=exec_command, container=container_name, stderr=True, stdin=True, stdout=True, tty=False)
             # Read the video file as bytes
