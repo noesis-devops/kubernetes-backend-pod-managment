@@ -267,18 +267,19 @@ class PodDeleteViewURL(APIView):
             resp.update(timeout=1)
             if resp.peek_stdout():
                 print(f"STDOUT: \n{resp.read_stdout()}")
+                file_list = resp.read_stdout().strip().split('\n')
+                for file_name in file_list:
+                    if ".mp4" in file_name:
+                        source_path = file_name
+                        print("source_path")
+                        print(source_path)
+                        return source_path
             if resp.peek_stderr():
                 print(f"STDERR: \n{resp.read_stderr()}")
 
         resp.close()
         
-        file_list = resp.strip().split('\n')
-        for file_name in file_list:
-            if ".mp4" in file_name:
-                source_path = file_name
-                print("source_path")
-                print(source_path)
-                return source_path
+        
 
         if resp.returncode != 0:
             raise Exception("Script failed")
