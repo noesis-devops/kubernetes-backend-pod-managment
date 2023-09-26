@@ -305,7 +305,10 @@ class PodDeleteViewURL(APIView):
             )
 
             # Read the file content as bytes from the pod
-            file_bytes = resp.read_stdout().encode('utf-8')
+            file_content = resp.read_stdout()
+            
+            # Base64 decode the file content (if it's encoded)
+            file_bytes = base64.b64decode(file_content)
 
             return file_bytes
 
