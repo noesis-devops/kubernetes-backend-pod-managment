@@ -266,8 +266,11 @@ class PodDeleteViewURL(APIView):
         while resp.is_open():
             resp.update(timeout=1)
             if resp.peek_stdout():
-                print(f"STDOUT: \n{resp.read_stdout()}")
-                file_list = resp.read_stdout().split('\n')
+                output = resp.read_stdout()
+                print(f"STDOUT: \n{output}")
+                print(output)
+                print(type(output))
+                file_list = output.split('\n')
                 print(file_list)
                 for file_name in file_list:
                     print("file_name_before")
