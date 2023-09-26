@@ -293,10 +293,21 @@ class PodDeleteViewURL(APIView):
         try:
             exec_command = ["cat", f"/videos/{file_name}"]
             v1 = client.CoreV1Api()
-            resp = stream(v1.connect_get_namespaced_pod_exec, pod_name, namespace, command=exec_command, container=container_name, stderr=True, stdin=True, stdout=True, tty=False)
-            # Read the video file as bytes
-            video_bytes = resp.encode()
-            return video_bytes
+            resp = api_instance.connect_get_namespaced_pod_exec(
+            name=pod_name,
+            namespace=namespace,
+            command=exec_command,
+            container=container_name,
+            stderr=True,
+            stdin=False,
+            stdout=True,
+            tty=False,
+            )
+
+            # Read the file content as bytes from the pod
+            file_bytes = resp.read_stdout().encode('utf-8')
+
+            return file_bytes
 
         except Exception as e:
             print(f"Error reading video from pod: {e}")
