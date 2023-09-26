@@ -269,6 +269,8 @@ class PodDeleteViewURL(APIView):
                 print(f"STDOUT: \n{resp.read_stdout()}")
                 file_list = resp.read_stdout().strip().split('\n')
                 for file_name in file_list:
+                    print("file_name_before")
+                    print(file_name)
                     if ".mp4" in file_name:
                         source_path = file_name
                         print("source_path")
