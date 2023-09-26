@@ -13,7 +13,7 @@ spec:
         app: node-{{ port }}
     spec:
       nodeSelector:
-        kubernetes.io/role: control-plane
+        kubernetes.io/role: controlplane
       containers:
         - name: node-{{ port }}
           image: {{ selenium_node_image }}
