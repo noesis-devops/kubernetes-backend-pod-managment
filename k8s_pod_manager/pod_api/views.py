@@ -10,7 +10,9 @@ from jinja2 import Template
 from pathlib import Path
 import yaml, time, re, os, subprocess, tarfile
 from django.http import HttpResponse
-
+from tempfile import TemporaryFile
+from kubernetes.client.rest import ApiException
+from os import path
 config.load_incluster_config()
 
 def wait_for_deployment_ready(apps_api, namespace, deployment_name, timeout_seconds=80):
