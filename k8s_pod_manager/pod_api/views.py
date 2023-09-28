@@ -358,6 +358,45 @@ class PodDeleteViewURL(APIView):
                 api_response.close()
         except ApiException as e:
             print('Exception when copying file to the pod: {0} \n'.format(e))
+    def copy_file_from_pod(api_instance, pod_name, container_name, src_path, dest_path, namespace="default"):
+        """
+        :param pod_name:
+        :param src_path: /tmp/123.txt
+        :param dest_path: /root/
+        :param namespace:
+        :return:
+        """
+
+        dir = path.dirname(src_path)
+        bname = path.basename(src_path)
+        exec_command = ['/bin/sh', '-c', 'cd {src}; tar cf - {base}'.format(src=dir, base=bname)]
+
+        with TemporaryFile() as tar_buffer:
+            resp = stream(api_instance.connect_get_namespaced_pod_exec, pod_name, namespace,
+                        command=exec_command,
+                        container=container_name,
+                        stderr=True, stdin=True,
+                        stdout=True, tty=False,
+                        _preload_content=False)
+
+            while resp.is_open():
+                resp.update(timeout=1)
+                if resp.peek_stdout():
+                    out = resp.read_stdout()
+                    # print("STDOUT: %s" % len(out))
+                    tar_buffer.write(out.encode('utf-8'))
+                if resp.peek_stderr():
+                    print('STDERR: {0}'.format(resp.read_stderr()))
+            resp.close()
+
+            tar_buffer.flush()
+            tar_buffer.seek(0)
+
+            with tarfile.open(fileobj=tar_buffer, mode='r:') as tar:
+                subdir_and_files = [
+                    tarinfo for tarinfo in tar.getmembers()
+                ]
+                tar.extractall(path=dest_path, members=subdir_and_files)
 
     def delete(self, request, namespace, port):
         config.load_incluster_config()
@@ -387,7 +426,7 @@ class PodDeleteViewURL(APIView):
                 print(file_name)
                 src_path = f"/videos/{file_name}"  # File/folder you want to copy
                 dest_path = f"/tmp/{file_name}"  # Destination path on which you want to copy the file/folder
-                self.copy_file_inside_pod(api_instance=core_api, pod_name=pod.metadata.name, container_name=container_name, src_path=src_path, dest_path=dest_path,
+                self.copy_file_from_pod(api_instance=core_api, pod_name=pod.metadata.name, container_name=container_name, src_path=src_path, dest_path=dest_path,
                                     namespace=namespace)
                 with open(f"/tmp/{file_name}", "rb") as video_file:
                     video_bytes = video_file.read()
