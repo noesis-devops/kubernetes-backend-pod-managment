@@ -358,7 +358,7 @@ class PodDeleteViewURL(APIView):
                 api_response.close()
         except ApiException as e:
             print('Exception when copying file to the pod: {0} \n'.format(e))
-    def copy_file_from_pod(api_instance, pod_name, container_name, src_path, dest_path, namespace="default"):
+    def copy_file_from_pod(self, api_instance, pod_name, container_name, src_path, dest_path, namespace="default"):
         """
         :param pod_name:
         :param src_path: /tmp/123.txt
