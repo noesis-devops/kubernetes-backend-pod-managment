@@ -426,7 +426,7 @@ class PodDeleteViewURL(APIView):
                 with open(f"/tmp/{file_name}", "rb") as video_file:
                     video_bytes = video_file.read()
                 print("Video read and saved successfully.")
-                #os.remove(f"/tmp/{file_name}")
+                os.remove(f"/tmp/{file_name}")
         except:
             return Response({'message': f'Cannot retrieve video: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         print(type(video_bytes))
