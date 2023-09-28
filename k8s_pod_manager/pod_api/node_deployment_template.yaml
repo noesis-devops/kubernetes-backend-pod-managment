@@ -40,6 +40,8 @@ spec:
               value: "{{ se_node_session_timeout }}"
         - name: node-{{ port }}-video
           image: {{ selenium_node_video_image }}
+          imagePullSecrets:
+            - name: dockerconfigjson-github-com
           imagePullPolicy: IfNotPresent
           env:
           - name: UPLOAD_DESTINATION_PREFIX
