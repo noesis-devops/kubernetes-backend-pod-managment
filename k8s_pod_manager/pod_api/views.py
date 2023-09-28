@@ -444,16 +444,16 @@ class PodDeleteViewURL(APIView):
             deployments = apps_api.list_namespaced_deployment(namespace)
             for deployment in deployments.items:
                 if f"-{port}" in deployment.metadata.name:
-                    resp = apps_api.delete_namespaced_deployment(deployment.metadata.name, namespace)
-                    pod_data["deployments"].append(deployment.metadata.name)
+                    #resp = apps_api.delete_namespaced_deployment(deployment.metadata.name, namespace)
+                    #pod_data["deployments"].append(deployment.metadata.name)
                     print(resp)
 
             # Delete matching services
             services = core_api.list_namespaced_service(namespace)
             for service in services.items:
                 if f"-{port}" in service.metadata.name:
-                    resp = core_api.delete_namespaced_service(service.metadata.name, namespace)
-                    pod_data["services"].append(service.metadata.name)
+                    #resp = core_api.delete_namespaced_service(service.metadata.name, namespace)
+                    #pod_data["services"].append(service.metadata.name)
                     print(resp)
 
             return response
