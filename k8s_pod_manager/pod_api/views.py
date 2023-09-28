@@ -8,7 +8,7 @@ from kubernetes import client, config
 from kubernetes.stream import stream
 from jinja2 import Template
 from pathlib import Path
-import yaml, time, re, os, subprocess, tarfile
+import yaml, time, re, os, subprocess, tarfile, base64
 from django.http import HttpResponse
 from tempfile import TemporaryFile
 from kubernetes.client.rest import ApiException
