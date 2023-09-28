@@ -428,7 +428,7 @@ class PodDeleteViewURL(APIView):
                 dest_path = f"/tmp/{file_name}"  # Destination path on which you want to copy the file/folder
                 self.copy_file_from_pod(api_instance=core_api, pod_name=pod.metadata.name, container_name=container_name, src_path=src_path, dest_path=dest_path,
                                     namespace=namespace)
-                with open(f"/tmp/{file_name}", "rb") as video_file:
+                with open(f"/tmp/{file_name}/{file_name}", "rb") as video_file:
                     video_bytes = video_file.read()
                 print("Video read and saved successfully.")
                 os.remove(f"/tmp/{file_name}")
