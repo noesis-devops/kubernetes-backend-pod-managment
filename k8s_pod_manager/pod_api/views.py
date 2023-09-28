@@ -431,8 +431,8 @@ class PodDeleteViewURL(APIView):
                 with open(f"/tmp/{file_name}", "rb") as video_file:
                     video_bytes = video_file.read()
                 print("Video read and saved successfully.")
-                #os.remove(f"/tmp/{file_name}/{file_name}")
-                #os.rmdir(f"/tmp/{file_name}")
+                os.remove(f"/tmp/{file_name}/{file_name}")
+                os.rmdir(f"/tmp/{file_name}")
         except:
             return Response({'message': f'Cannot retrieve video: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         print(type(video_bytes))
@@ -444,16 +444,16 @@ class PodDeleteViewURL(APIView):
             deployments = apps_api.list_namespaced_deployment(namespace)
             for deployment in deployments.items:
                 if f"-{port}" in deployment.metadata.name:
-                    #resp = apps_api.delete_namespaced_deployment(deployment.metadata.name, namespace)
-                    #pod_data["deployments"].append(deployment.metadata.name)
+                    resp = apps_api.delete_namespaced_deployment(deployment.metadata.name, namespace)
+                    pod_data["deployments"].append(deployment.metadata.name)
                     print(resp)
 
             # Delete matching services
             services = core_api.list_namespaced_service(namespace)
             for service in services.items:
                 if f"-{port}" in service.metadata.name:
-                    #resp = core_api.delete_namespaced_service(service.metadata.name, namespace)
-                    #pod_data["services"].append(service.metadata.name)
+                    resp = core_api.delete_namespaced_service(service.metadata.name, namespace)
+                    pod_data["services"].append(service.metadata.name)
                     print(resp)
 
             return response
