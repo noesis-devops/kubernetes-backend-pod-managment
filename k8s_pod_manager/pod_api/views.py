@@ -317,7 +317,7 @@ class PodDeleteViewURL(APIView):
         except Exception as e:
             print(f"Error reading video from pod: {e}")
         
-    def copy_file_inside_pod(self, api_instance, pod_name, src_path, dest_path, namespace='default'):
+    def copy_file_inside_pod(self, api_instance, pod_name, container_name, src_path, dest_path, namespace='default'):
         """
         This function copies a file inside the pod
         :param api_instance: coreV1Api()
@@ -331,6 +331,7 @@ class PodDeleteViewURL(APIView):
             exec_command = ['tar', 'xvf', '-', '-C', '/']
             api_response = stream(api_instance.connect_get_namespaced_pod_exec, pod_name, namespace,
                                 command=exec_command,
+                                container=container_name,
                                 stderr=True, stdin=True,
                                 stdout=True, tty=False,
                                 _preload_content=False)
@@ -384,7 +385,7 @@ class PodDeleteViewURL(APIView):
                 print(file_name)
                 src_path = f"/videos/{file_name}"  # File/folder you want to copy
                 dest_path = f"/tmp/{file_name}"  # Destination path on which you want to copy the file/folder
-                self.copy_file_inside_pod(api_instance=core_api, pod_name=pod.metadata.name, src_path=src_path, dest_path=dest_path,
+                self.copy_file_inside_pod(api_instance=core_api, pod_name=pod.metadata.name, container_name=container_name, src_path=src_path, dest_path=dest_path,
                                     namespace=namespace)
                 with open(f"/tmp/{file_name}", "rb") as video_file:
                     video_bytes = video_file.read()
