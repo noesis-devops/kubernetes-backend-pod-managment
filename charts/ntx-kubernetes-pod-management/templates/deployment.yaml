@@ -42,13 +42,13 @@ spec:
         - containerPort: 8000
           name: django-api
         resources: {}
-        volumeMounts:
-          - mountPath: /shared-data
-            name: shared-storage
-      volumes:
-        - name: shared-storage
-          persistentVolumeClaim:
-            claimName: shared-claim
+        #volumeMounts:
+        #  - mountPath: /shared-data
+        #    name: shared-storage
+      #volumes:
+      #  - name: shared-storage
+      #    persistentVolumeClaim:
+      #      claimName: shared-claim
       imagePullSecrets: 
         - name: {{ .Values.deployment.ntxKubernetesPodManagement.imagePullSecrets }}
       serviceAccountName: {{ include "ntx-kubernetes-pod-management.fullname" . }}-account

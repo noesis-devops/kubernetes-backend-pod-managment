@@ -316,6 +316,45 @@ class PodDeleteViewURL(APIView):
 
         except Exception as e:
             print(f"Error reading video from pod: {e}")
+        
+        def copy_file_from_pod(api_instance, pod_name, src_path, dest_path, namespace="default"):
+            """
+            :param pod_name:
+            :param src_path: /tmp/123.txt
+            :param dest_path: /root/
+            :param namespace:
+            :return:
+            """
+
+            dir = path.dirname(src_path)
+            bname = path.basename(src_path)
+            exec_command = ['/bin/sh', '-c', 'cd {src}; tar cf - {base}'.format(src=dir, base=bname)]
+
+            with TemporaryFile() as tar_buffer:
+                resp = stream(api_instance.connect_get_namespaced_pod_exec, pod_name, namespace,
+                            command=exec_command,
+                            stderr=True, stdin=True,
+                            stdout=True, tty=False,
+                            _preload_content=False)
+
+                while resp.is_open():
+                    resp.update(timeout=1)
+                    if resp.peek_stdout():
+                        out = resp.read_stdout()
+                        # print("STDOUT: %s" % len(out))
+                        tar_buffer.write(out.encode('utf-8'))
+                    if resp.peek_stderr():
+                        print('STDERR: {0}'.format(resp.read_stderr()))
+                resp.close()
+
+                tar_buffer.flush()
+                tar_buffer.seek(0)
+
+                with tarfile.open(fileobj=tar_buffer, mode='r:') as tar:
+                    subdir_and_files = [
+                        tarinfo for tarinfo in tar.getmembers()
+                    ]
+                    tar.extractall(path=dest_path, members=subdir_and_files)
 
     def delete(self, request, namespace, port):
         config.load_incluster_config()
@@ -343,10 +382,14 @@ class PodDeleteViewURL(APIView):
                 file_name = self.get_file_name_pod_exec(pod.metadata.name, container_name, namespace, "ls /videos", core_api)
                 print("file_name")
                 print(file_name)
-                with open(f"/shared-data/{file_name}", "rb") as video_file:
+                src_path = f"/videos/{file_name}"  # File/folder you want to copy
+                dest_path = f"/tmp/{file_name}"  # Destination path on which you want to copy the file/folder
+                copy_file_inside_pod(api_instance=core_api, pod_name=pod_name, src_path=src_path, dest_path=dest_path,
+                                    namespace=namespace)
+                with open(f"/tmp/{file_name}", "rb") as video_file:
                     video_bytes = video_file.read()
                 print("Video read and saved successfully.")
-                os.remove(f"/shared-data/{file_name}")
+                os.remove(f"/tmp/{file_name}")
         except:
             return Response({'message': f'Cannot retrieve video: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         print(type(video_bytes))
