@@ -317,44 +317,44 @@ class PodDeleteViewURL(APIView):
         except Exception as e:
             print(f"Error reading video from pod: {e}")
         
-        def copy_file_inside_pod(self, api_instance, pod_name, src_path, dest_path, namespace='default'):
-            """
-            This function copies a file inside the pod
-            :param api_instance: coreV1Api()
-            :param name: pod name
-            :param ns: pod namespace
-            :param source_file: Path of the file to be copied into pod
-            :return: nothing
-            """
+    def copy_file_inside_pod(self, api_instance, pod_name, src_path, dest_path, namespace='default'):
+        """
+        This function copies a file inside the pod
+        :param api_instance: coreV1Api()
+        :param name: pod name
+        :param ns: pod namespace
+        :param source_file: Path of the file to be copied into pod
+        :return: nothing
+        """
 
-            try:
-                exec_command = ['tar', 'xvf', '-', '-C', '/']
-                api_response = stream(api_instance.connect_get_namespaced_pod_exec, pod_name, namespace,
-                                    command=exec_command,
-                                    stderr=True, stdin=True,
-                                    stdout=True, tty=False,
-                                    _preload_content=False)
+        try:
+            exec_command = ['tar', 'xvf', '-', '-C', '/']
+            api_response = stream(api_instance.connect_get_namespaced_pod_exec, pod_name, namespace,
+                                command=exec_command,
+                                stderr=True, stdin=True,
+                                stdout=True, tty=False,
+                                _preload_content=False)
 
-                with TemporaryFile() as tar_buffer:
-                    with tarfile.open(fileobj=tar_buffer, mode='w') as tar:
-                        tar.add(src_path, dest_path)
+            with TemporaryFile() as tar_buffer:
+                with tarfile.open(fileobj=tar_buffer, mode='w') as tar:
+                    tar.add(src_path, dest_path)
 
-                    tar_buffer.seek(0)
-                    commands = [tar_buffer.read()]
-                    while api_response.is_open():
-                        api_response.update(timeout=1)
-                        if api_response.peek_stdout():
-                            print('STDOUT: {0}'.format(api_response.read_stdout()))
-                        if api_response.peek_stderr():
-                            print('STDERR: {0}'.format(api_response.read_stderr()))
-                        if commands:
-                            c = commands.pop(0)
-                            api_response.write_stdin(c.decode())
-                        else:
-                            break
-                    api_response.close()
-            except ApiException as e:
-                print('Exception when copying file to the pod: {0} \n'.format(e))
+                tar_buffer.seek(0)
+                commands = [tar_buffer.read()]
+                while api_response.is_open():
+                    api_response.update(timeout=1)
+                    if api_response.peek_stdout():
+                        print('STDOUT: {0}'.format(api_response.read_stdout()))
+                    if api_response.peek_stderr():
+                        print('STDERR: {0}'.format(api_response.read_stderr()))
+                    if commands:
+                        c = commands.pop(0)
+                        api_response.write_stdin(c.decode())
+                    else:
+                        break
+                api_response.close()
+        except ApiException as e:
+            print('Exception when copying file to the pod: {0} \n'.format(e))
 
     def delete(self, request, namespace, port):
         config.load_incluster_config()
