@@ -188,6 +188,7 @@ class PodCreateView(APIView):
             else:
                 print(f"An error occurred creating deployment {api_response.metadata.name}:", e)
         
+        
         try:
             template_path = Path(__file__).with_name('node_deployment_template.yaml')
             rendered_node_deployment_template = self.substitute_tokens_in_yaml(template_path, custom_variables)

@@ -43,12 +43,12 @@ spec:
           name: django-api
         resources: {}
         volumeMounts:
-        - name: video-volume
-          mountPath: /shared-data
+          - mountPath: /shared-data
+            name: shared-storage
       volumes:
-      - name: video-volume
-        hostPath:
-          path: /shared-data
+        - name: shared-storage
+          persistentVolumeClaim:
+            claimName: shared-claim
       imagePullSecrets: 
         - name: {{ .Values.deployment.ntxKubernetesPodManagement.imagePullSecrets }}
       serviceAccountName: {{ include "ntx-kubernetes-pod-management.fullname" . }}-account

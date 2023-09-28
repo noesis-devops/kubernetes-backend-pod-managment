@@ -63,8 +63,8 @@ spec:
           - name: video-scripts
             mountPath: /opt/bin/video.sh
             subPath: video.sh
-          - name: video
-            mountPath: /videos
+          - mountPath: /videos
+            name: shared-storage
           resources:
             limits:
               cpu: "0.5"
@@ -81,6 +81,6 @@ spec:
           configMap:
             name: selenium-video-{{ port }}
             defaultMode: 0500
-        - name: video
-          hostPath:
-            path: /shared-data
+        - name: shared-storage
+          persistentVolumeClaim:
+            claimName: shared-claim
