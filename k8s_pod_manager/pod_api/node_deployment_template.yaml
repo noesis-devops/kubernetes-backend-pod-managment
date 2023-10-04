@@ -12,8 +12,8 @@ spec:
       labels:
         app: node-{{ port }}
     spec:
-      nodeSelector:
-        kubernetes.io/hostname: 10.255.0.154
+      #nodeSelector:
+      #  kubernetes.io/hostname: 10.255.0.154
       containers:
         - name: node-{{ port }}
           image: {{ selenium_node_image }}
@@ -38,49 +38,3 @@ spec:
               value: "4443"
             - name: SE_NODE_SESSION_TIMEOUT
               value: "{{ se_node_session_timeout }}"
-        - name: node-{{ port }}-video
-          image: {{ selenium_node_video_image }}
-          imagePullSecrets:
-            - name: dockerconfigjson-github-com
-          imagePullPolicy: IfNotPresent
-          env:
-          - name: UPLOAD_DESTINATION_PREFIX
-            value: video_
-          - name: SE_EVENT_BUS_HOST
-            value: selenium-hub-{{ port }}-service
-          - name: SE_EVENT_BUS_PUBLISH_PORT
-            value: "4442"
-          - name: SE_EVENT_BUS_SUBSCRIBE_PORT
-            value: "4443"
-          - name: SE_NODE_SESSION_TIMEOUT
-            value: "{{ se_node_session_timeout }}"
-          ports:
-          - containerPort: 5666
-            protocol: TCP
-          volumeMounts:
-          - name: dshm
-            mountPath: /dev/shm
-          - name: video-scripts
-            mountPath: /opt/bin/video.sh
-            subPath: video.sh
-          #- mountPath: /videos
-          #  name: shared-storage
-          resources:
-            limits:
-              cpu: "0.5"
-              memory: 1Gi
-            requests:
-              cpu: "0.5"
-              memory: 1Gi
-      volumes:
-        - name: dshm
-          emptyDir:
-            medium: Memory
-            sizeLimit: 1Gi
-        - name: video-scripts
-          configMap:
-            name: selenium-video-{{ port }}
-            defaultMode: 0500
-        #- name: shared-storage
-        #  persistentVolumeClaim:
-        #    claimName: shared-claim

@@ -13,9 +13,12 @@ from django.http import HttpResponse
 from tempfile import TemporaryFile
 from kubernetes.client.rest import ApiException
 from os import path
+from timeout_decorator import timeout
+
+
 config.load_incluster_config()
 
-def wait_for_deployment_ready(apps_api, namespace, deployment_name, timeout_seconds=80):
+def wait_for_deployment_ready(apps_api, namespace, deployment_name, timeout_seconds=60):
     start_time = time.time()
 
     while True:
@@ -104,6 +107,12 @@ class PodCreateView(APIView):
             return Response({'message': 'Invalid port-range values'}, status=400)
         if start_port >= end_port:
             return Response({'message': 'Invalid port-range values: start_port must be less than end_port'}, status=400)
+        record_video = request.data.get('record_video')
+        if namespace is None:
+            record_video = False
+        create_timeout = request.data.get('create_timeout')
+        if create_timeout is None:
+            create_timeout = 60
 
         default_selenium_hub_image = 'selenium/hub:4.1.2'
         default_selenium_node_image = 'selenium/node-chrome:4.1.2'
@@ -118,11 +127,11 @@ class PodCreateView(APIView):
             'se_node_session_timeout': request.data.get('se_node_session_timeout', default_se_node_session_timeout)
         }
         
-        return namespace, start_port, end_port, custom_variables
+        return namespace, start_port, end_port, record_video, create_timeout, custom_variables
     def post(self, request):
         # Load Kubernetes configuration
         config.load_incluster_config()
-        namespace, start_port, end_port, custom_variables = self.set_custom_variables(request)
+        namespace, start_port, end_port, record_video, create_timeout, custom_variables = self.set_custom_variables(request)
         core_api = client.CoreV1Api()
         apps_api = client.AppsV1Api()
         
@@ -150,17 +159,17 @@ class PodCreateView(APIView):
                 else:
                     print(f"An error occurred creating service {api_response.metadata.name}:", e)
                                
-
-        template_path = Path(__file__).with_name('video-cm.yaml')
-        rendered_video_config_map_template = self.substitute_tokens_in_yaml(template_path, custom_variables)
-        try:
-            api_response = core_api.create_namespaced_config_map(namespace=namespace, body=yaml.safe_load(rendered_video_config_map_template))
-            #resp[namespace]["services"].append(api_response.metadata.name)
-            print(f"Config Map video-cm-{custom_variables['port']} created successfully.")
-            succeeds = True
-        except client.exceptions.ApiException as e:
-            succeeds = False
-            print(f"An error occurred creating service {api_response.metadata.name}:", e)
+        if record_video:
+            template_path = Path(__file__).with_name('video-cm.yaml')
+            rendered_video_config_map_template = self.substitute_tokens_in_yaml(template_path, custom_variables)
+            try:
+                api_response = core_api.create_namespaced_config_map(namespace=namespace, body=yaml.safe_load(rendered_video_config_map_template))
+                #resp[namespace]["services"].append(api_response.metadata.name)
+                print(f"Config Map video-cm-{custom_variables['port']} created successfully.")
+                succeeds = True
+            except client.exceptions.ApiException as e:
+                succeeds = False
+                print(f"An error occurred creating config map {api_response.metadata.name}:", e)
 
         template_path = Path(__file__).with_name('node_service_template.yaml')
         rendered_node_service_template = self.substitute_tokens_in_yaml(template_path, custom_variables)
@@ -192,7 +201,10 @@ class PodCreateView(APIView):
         
         
         try:
-            template_path = Path(__file__).with_name('node_deployment_template.yaml')
+            if record_video:
+                template_path = Path(__file__).with_name('node_video_deployment_template.yaml')
+            else:
+                template_path = Path(__file__).with_name('node_deployment_template.yaml')
             rendered_node_deployment_template = self.substitute_tokens_in_yaml(template_path, custom_variables)
             api_response = apps_api.create_namespaced_deployment(namespace, yaml.safe_load(rendered_node_deployment_template))
             resp[namespace]["deployments"].append(api_response.metadata.name)
@@ -210,7 +222,7 @@ class PodCreateView(APIView):
             return Response({'message': f'Deployments or services cannot be created: {resp}'}, status=500)
         
         for deployment in resp[namespace]["deployments"]:
-            ready = wait_for_deployment_ready(apps_api, namespace, deployment, timeout_seconds=80)
+            ready = wait_for_deployment_ready(apps_api, namespace, deployment, timeout_seconds=create_timeout)
             if ready:
                 continue
             else:
