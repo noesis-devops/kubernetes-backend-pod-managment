@@ -35,12 +35,12 @@ def wait_for_deployment_ready(apps_api, namespace, deployment_name, timeout_seco
     return False  # In case of unexpected exit from the loop
 
 # delete everything if something fails    
-def delete_objects(resp, namespace):
+def delete_objects(apps_api, core_api, resp, namespace):
     for deployment in resp[namespace]["deployments"]:
         apps_api.delete_namespaced_deployment(deployment, namespace)
         print(f"'{deployment}' deleted successfully.")
     for service in resp[namespace]["services"]:
-        ore_api.delete_namespaced_service(service, namespace)
+        core_api.delete_namespaced_service(service, namespace)
         print(f"'{service}' deleted successfully.")
     for config_map in resp[namespace]["config_maps"]:
         core_api.delete_namespaced_config_map(config_map, namespace)
@@ -220,7 +220,7 @@ class PodCreateView(APIView):
                 print(f"An error occurred creating deployment {api_response.metadata.name}:", e)
         
         if succeeds == False:
-            delete_objects(resp, namespace)
+            delete_objects(apps_api, core_api, resp, namespace)
             return Response({'message': f'Deployments or services cannot be created: {resp}'}, status=500)
         
         for deployment in resp[namespace]["deployments"]:
@@ -228,7 +228,7 @@ class PodCreateView(APIView):
             if ready:
                 continue
             else:
-                delete_objects(resp, namespace)
+                delete_objects(apps_api, core_api, resp, namespace)
                 return Response({'message': f'Deployment {deployment} did not become ready within the timeout.'}, status=500)
             
         return Response({'objects_created': resp, "port": custom_variables["port"]})
