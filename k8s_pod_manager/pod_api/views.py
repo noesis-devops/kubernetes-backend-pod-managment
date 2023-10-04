@@ -304,71 +304,6 @@ class PodDeleteViewURL(APIView):
 
         if resp.returncode != 0:
             raise Exception("Script failed")
-    def copy_video_from_pod(self, pod_name, namespace, destination_path, file_name, container_name):
-        try:
-            exec_command = ["cat", f"/videos/{file_name}"]
-            v1 = client.CoreV1Api()
-            resp = stream(v1.connect_get_namespaced_pod_exec(
-            name=pod_name,
-            namespace=namespace,
-            command=exec_command,
-            container=container_name,
-            stderr=True,
-            stdin=False,
-            stdout=True,
-            tty=False,
-            ))
-
-            # Read the file content as bytes from the pod
-            file_content = resp.read_stdout()
-            
-            # Base64 decode the file content (if it's encoded)
-            file_bytes = base64.b64decode(file_content)
-
-            return file_bytes
-
-        except Exception as e:
-            print(f"Error reading video from pod: {e}")
-        
-    def copy_file_inside_pod(self, api_instance, pod_name, container_name, src_path, dest_path, namespace='default'):
-        """
-        This function copies a file inside the pod
-        :param api_instance: coreV1Api()
-        :param name: pod name
-        :param ns: pod namespace
-        :param source_file: Path of the file to be copied into pod
-        :return: nothing
-        """
-
-        try:
-            exec_command = ['tar', 'xvf', '-', '-C', '/']
-            api_response = stream(api_instance.connect_get_namespaced_pod_exec, pod_name, namespace,
-                                command=exec_command,
-                                container=container_name,
-                                stderr=True, stdin=True,
-                                stdout=True, tty=False,
-                                _preload_content=False)
-
-            with TemporaryFile() as tar_buffer:
-                with tarfile.open(fileobj=tar_buffer, mode='w') as tar:
-                    tar.add(src_path, dest_path)
-
-                tar_buffer.seek(0)
-                commands = [tar_buffer.read()]
-                while api_response.is_open():
-                    api_response.update(timeout=1)
-                    if api_response.peek_stdout():
-                        print('STDOUT: {0}'.format(api_response.read_stdout()))
-                    if api_response.peek_stderr():
-                        print('STDERR: {0}'.format(api_response.read_stderr()))
-                    if commands:
-                        c = commands.pop(0)
-                        api_response.write_stdin(c.decode())
-                    else:
-                        break
-                api_response.close()
-        except ApiException as e:
-            print('Exception when copying file to the pod: {0} \n'.format(e))
     def copy_file_from_pod(self, api_instance, pod_name, container_name, src_path, dest_path, namespace="default"):
         try:
             exec_command = ['/bin/sh', '-c', 'cat {src_path} | base64'.format(src_path=src_path)]
@@ -411,7 +346,7 @@ class PodDeleteViewURL(APIView):
         core_api = client.CoreV1Api()
         apps_api = client.AppsV1Api()
         
-        pod_data = {"deployments": [], "services": []}
+        pod_data = {"deployments": [], "services": [], "config_maps": []}
         
         # Define a regular expression pattern to match valid port values
         port_pattern = re.compile(r'^\d{1,5}$')
@@ -420,30 +355,38 @@ class PodDeleteViewURL(APIView):
         if not port_pattern.match(port):
             return Response({'message': 'Invalid port value'}, status=status.HTTP_400_BAD_REQUEST)
         video_bytes = None
+        record_video = False
         try:
              # Example usage:
             destination_path = "/tmp/node-" + port + "-video.mp4"  # Local path where the video will be copied
             container_name = "node-"+ port + "-video"
             pods = self.get_pods_by_app_label("node-" + port, namespace)
-            
             for pod in pods:
-                file_name = self.get_file_name_pod_exec(pod.metadata.name, container_name, namespace, "ls /videos", core_api)
-                print("file_name")
-                print(file_name)
-                src_path = f"/videos/{file_name}"  # File/folder you want to copy
-                dest_path = f"/tmp/{file_name}"  # Destination path on which you want to copy the file/folder
-                self.copy_file_from_pod(api_instance=core_api, pod_name=pod.metadata.name, container_name=container_name, src_path=src_path, dest_path=dest_path,
-                                    namespace=namespace)
-                with open(f"/tmp/{file_name}", "rb") as video_file:
-                    video_bytes = video_file.read()
-                print("Video read and saved successfully.")
-                os.remove(f"/tmp/{file_name}")
+                for container in pod.spec.containers:
+                    if container.name == f"node-{port}-video":
+                        record_video = True
+                        break
+                if record_video:
+                    print("Record video: on")
+                    file_name = self.get_file_name_pod_exec(pod.metadata.name, container_name, namespace, "ls /videos", core_api)
+                    print("file_name")
+                    print(file_name)
+                    src_path = f"/videos/{file_name}"  # File/folder you want to copy
+                    dest_path = f"/tmp/{file_name}"  # Destination path on which you want to copy the file/folder
+                    self.copy_file_from_pod(api_instance=core_api, pod_name=pod.metadata.name, container_name=container_name, src_path=src_path, dest_path=dest_path,
+                                        namespace=namespace)
+                    with open(f"/tmp/{file_name}", "rb") as video_file:
+                        video_bytes = video_file.read()
+                    print("Video read and saved successfully.")
+                    os.remove(f"/tmp/{file_name}")
+                print("Record video: off")
         except:
             return Response({'message': f'Cannot retrieve video: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        print(type(video_bytes))
-        print(video_bytes)
-        response = HttpResponse(video_bytes, content_type='video/mp4')
-        response['Content-Disposition'] = 'attachment; filename="video.mp4"'
+        if record_video:
+            print(type(video_bytes))
+            print(video_bytes)
+            response = HttpResponse(video_bytes, content_type='video/mp4')
+            response['Content-Disposition'] = 'attachment; filename="video.mp4"'
         try:
             # Delete matching deployments
             deployments = apps_api.list_namespaced_deployment(namespace)
@@ -460,7 +403,16 @@ class PodDeleteViewURL(APIView):
                     resp = core_api.delete_namespaced_service(service.metadata.name, namespace)
                     pod_data["services"].append(service.metadata.name)
                     print(resp)
-
-            return response
+             # Delete matching configsMaps
+            config_maps = core_api.list_namespaced_config_map(namespace)
+            for config_map in config_maps.items:
+                if f"-{port}" in config_map.metadata.name:
+                    resp = core_api.delete_namespaced_config_map(config_map.metadata.name, namespace)
+                    pod_data["config_maps"].append(config_map.metadata.name)
+                    print(resp)
+            if record_video:
+                return response
+            else:
+                return Response(pod_data)
         except client.rest.ApiException as e:
             return Response({'message': f'Error deleting: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

@@ -38,3 +38,11 @@ spec:
               value: "4443"
             - name: SE_NODE_SESSION_TIMEOUT
               value: "{{ se_node_session_timeout }}"
+      volumes:
+        - name: dshm
+          emptyDir:
+            medium: Memory
+            sizeLimit: 1Gi
+        #- name: shared-storage
+        #  persistentVolumeClaim:
+        #    claimName: shared-claim
