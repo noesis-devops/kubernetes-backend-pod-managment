@@ -35,13 +35,16 @@ def wait_for_deployment_ready(apps_api, namespace, deployment_name, timeout_seco
     return False  # In case of unexpected exit from the loop
 
 # delete everything if something fails    
-def delete_deployment_and_service(resp):
+def delete_objects(resp, namespace):
     for deployment in resp[namespace]["deployments"]:
-            resp = apps_api.delete_namespaced_deployment(deployment, namespace)
-            print(f"'{deployment}' deleted successfully.")
+        apps_api.delete_namespaced_deployment(deployment, namespace)
+        print(f"'{deployment}' deleted successfully.")
     for service in resp[namespace]["services"]:
-        resp = core_api.delete_namespaced_service(service, namespace)
+        ore_api.delete_namespaced_service(service, namespace)
         print(f"'{service}' deleted successfully.")
+    for config_map in resp[namespace]["config_maps"]:
+        core_api.delete_namespaced_config_map(config_map, namespace)
+        print(f"'{config_map}' deleted successfully.")
     return Response({'deleted': resp})
 
 class PodManagement:
@@ -134,7 +137,7 @@ class PodCreateView(APIView):
         core_api = client.CoreV1Api()
         apps_api = client.AppsV1Api()
         
-        resp = {namespace: {"deployments": [], "services": []}}
+        resp = {namespace: {"deployments": [], "services": [], "config_maps": []}}
         
         succeeds = False
         
@@ -217,7 +220,7 @@ class PodCreateView(APIView):
                 print(f"An error occurred creating deployment {api_response.metadata.name}:", e)
         
         if succeeds == False:
-            delete_deployment_and_service(resp)
+            delete_objects(resp, namespace)
             return Response({'message': f'Deployments or services cannot be created: {resp}'}, status=500)
         
         for deployment in resp[namespace]["deployments"]:
@@ -225,7 +228,7 @@ class PodCreateView(APIView):
             if ready:
                 continue
             else:
-                delete_deployment_and_service(resp)
+                delete_objects(resp, namespace)
                 return Response({'message': f'Deployment {deployment} did not become ready within the timeout.'}, status=500)
             
         return Response({'objects_created': resp, "port": custom_variables["port"]})
