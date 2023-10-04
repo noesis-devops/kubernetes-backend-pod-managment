@@ -13,7 +13,6 @@ from django.http import HttpResponse
 from tempfile import TemporaryFile
 from kubernetes.client.rest import ApiException
 from os import path
-from timeout_decorator import timeout
 
 
 config.load_incluster_config()
