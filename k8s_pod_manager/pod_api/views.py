@@ -115,18 +115,23 @@ class PodCreateView(APIView):
         create_timeout = request.data.get('create_timeout')
         if create_timeout is None:
             create_timeout = 60
+            
 
         default_selenium_hub_image = 'selenium/hub:4.1.2'
         default_selenium_node_image = 'selenium/node-chrome:4.1.2'
         default_se_node_session_timeout = 300  # Default timeout in seconds
         default_selenium_node_video_image = 'ghcr.io/noesis-devops/kubernetes-backend-pod-managment/selenium/video:1.0.1'
+        default_http_proxy = ''
+        default_https_proxy = ''
         
         custom_variables = {
             'port': port_range,
             'selenium_hub_image': request.data.get('selenium-hub-image', default_selenium_hub_image),
             'selenium_node_image': request.data.get('selenium-node-image', default_selenium_node_image),
             'selenium_node_video_image': request.data.get('selenium-node-video-image', default_selenium_node_video_image),
-            'se_node_session_timeout': request.data.get('se_node_session_timeout', default_se_node_session_timeout)
+            'se_node_session_timeout': request.data.get('se_node_session_timeout', default_se_node_session_timeout),
+            'http_proxy': request.data.get('http_proxy', default_http_proxy),
+            'https_proxy': request.data.get('https_proxy', default_https_proxy),
         }
         
         return namespace, start_port, end_port, record_video, create_timeout, custom_variables
