@@ -12,8 +12,8 @@ spec:
       labels:
         app: node-{{ port }}
     spec:
-      nodeSelector:
-        kubernetes.io/hostname: 10.255.0.154
+      #nodeSelector:
+      #  kubernetes.io/hostname: 10.255.0.154
       containers:
         - name: node-{{ port }}
           image: {{ selenium_node_image }}

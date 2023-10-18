@@ -24,7 +24,7 @@ websocket-client==1.6.1
 Jinja2==3.1.2
 pathlib==1.0.1
 ecs-logging==2.1.0
-elastic-apm==6.18.0
+#elastic-apm==6.18.0
 wrapt==1.15.0
 attrs==23.1.0
 drf-spectacular==0.26.4

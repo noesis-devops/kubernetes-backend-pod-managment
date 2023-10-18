@@ -16,6 +16,16 @@ rules:
   - create
   - delete
 - apiGroups:
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - get
+  - watch
+  - list
+  - create
+  - delete
+- apiGroups:
   - apps
   resources:
   - deployments
@@ -35,3 +45,10 @@ rules:
   - list
   - get
   - watch
+- apiGroups:
+  - ""
+  resources:
+  - pods/exec
+  verbs:
+  - create
+  - get
