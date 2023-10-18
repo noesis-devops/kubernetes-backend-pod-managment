@@ -123,6 +123,7 @@ class PodCreateView(APIView):
         default_selenium_node_video_image = 'ghcr.io/noesis-devops/kubernetes-backend-pod-managment/selenium/video:1.0.1'
         default_http_proxy = ''
         default_https_proxy = ''
+        default_no_proxy = ''
         
         custom_variables = {
             'port': port_range,
@@ -132,6 +133,7 @@ class PodCreateView(APIView):
             'se_node_session_timeout': request.data.get('se_node_session_timeout', default_se_node_session_timeout),
             'http_proxy': request.data.get('http_proxy', default_http_proxy),
             'https_proxy': request.data.get('https_proxy', default_https_proxy),
+            'no_proxy': request.data.get('no_proxy', default_no_proxy),
         }
         
         return namespace, start_port, end_port, record_video, create_timeout, custom_variables
