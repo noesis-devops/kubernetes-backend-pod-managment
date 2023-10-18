@@ -49,15 +49,15 @@ REST_FRAMEWORK = {
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
 
-ELASTIC_APM = {
-  'SERVICE_NAME': 'ntx-kubernetes-pod-management-api',
-  
-  'SECRET_TOKEN': os.environ.get('SECRET_TOKEN').rstrip(),
-  'SERVER_URL': os.environ.get('SERVER_URL').rstrip(),
-  'ENVIRONMENT': 'dev',
-  'DEBUG': True,
-  'ELASTIC_APM_VERIFY_SERVER_CERT': False,
-}
+#ELASTIC_APM = {
+#  'SERVICE_NAME': 'ntx-kubernetes-pod-management-api',
+#  
+#  'SECRET_TOKEN': os.environ.get('SECRET_TOKEN').rstrip(),
+#  'SERVER_URL': os.environ.get('SERVER_URL').rstrip(),
+#  'ENVIRONMENT': 'dev',
+#  'DEBUG': True,
+#  'ELASTIC_APM_VERIFY_SERVER_CERT': False,
+#}
 
 MIDDLEWARE = [
     'elasticapm.contrib.django.middleware.TracingMiddleware',

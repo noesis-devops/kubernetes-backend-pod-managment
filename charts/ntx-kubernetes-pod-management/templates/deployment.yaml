@@ -17,22 +17,12 @@ spec:
         app: ntx-kubernetes-pod-management
       {{- include "ntx-kubernetes-pod-management.selectorLabels" . | nindent 8 }}
     spec:
-      nodeSelector:
-        kubernetes.io/hostname: 10.255.0.154
+      #nodeSelector:
+      #  kubernetes.io/hostname: 10.255.0.154
       containers:
       - env:
         - name: KUBERNETES_CLUSTER_DOMAIN
           value: {{ quote .Values.kubernetesClusterDomain }}
-        - name: SERVER_URL
-          valueFrom:
-            secretKeyRef:
-              name: elastic-apm-secret
-              key: server_url
-        - name: SECRET_TOKEN
-          valueFrom:
-            secretKeyRef:
-              name: elastic-apm-secret
-              key: secret_token
         image: {{ .Values.deployment.ntxKubernetesPodManagement.image.repository }}:{{
           .Values.deployment.ntxKubernetesPodManagement.image.tag | default .Chart.AppVersion
           }}
@@ -49,6 +39,6 @@ spec:
       #  - name: shared-storage
       #    persistentVolumeClaim:
       #      claimName: shared-claim
-      imagePullSecrets: 
-        - name: {{ .Values.deployment.ntxKubernetesPodManagement.imagePullSecrets }}
+      #imagePullSecrets: 
+      #  - name: {{ .Values.deployment.ntxKubernetesPodManagement.imagePullSecrets }}
       serviceAccountName: {{ include "ntx-kubernetes-pod-management.fullname" . }}-account

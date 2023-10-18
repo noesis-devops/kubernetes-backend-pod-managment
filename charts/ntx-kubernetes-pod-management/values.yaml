@@ -7,7 +7,7 @@ deployment:
       repository: ghcr.io/noesis-devops/kubernetes-backend-pod-managment
       tag: 1.4.4
     imagePullPolicy: Always
-    imagePullSecrets: dockerconfigjson-github-com
+    #imagePullSecrets: dockerconfigjson-github-com
   replicas: 1
 kubernetesClusterDomain: cluster.local
 service:
