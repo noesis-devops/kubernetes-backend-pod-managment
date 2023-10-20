@@ -295,7 +295,7 @@ class PodCreateView(APIView):
         #else:
         #    delete_objects(apps_api, core_api, resp, namespace)
         #    return Response({'message': f'Node hasnt been registered'}, status=500)
-        pods = get_pods_by_app_label("node-" + port, namespace)
+        pods = get_pods_by_app_label(f"node-{port}", namespace)
         for pod in pods:
             for container in pod.spec.containers:
                 if container.name == f"node-{port}":
