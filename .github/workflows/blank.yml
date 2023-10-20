@@ -73,7 +73,7 @@ jobs:
           context: .
           file: ./k8s_pod_manager/Dockerfile
           push: true
-          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:1.4.13
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:1.4.14
           labels: ${{ steps.meta.outputs.labels }}
   #deployment:
   #  runs-on: ubuntu-latest

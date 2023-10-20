@@ -296,10 +296,10 @@ class PodCreateView(APIView):
         #    delete_objects(apps_api, core_api, resp, namespace)
         #    return Response({'message': f'Node hasnt been registered'}, status=500)
         pods = get_pods_by_app_label("node-" + port, namespace)
-            for pod in pods:
-                for container in pod.spec.containers:
-                    if container.name == f"node-{port}":
-                        resp = exec_cmd(core_api, pod.metadata.name, container.name, namespace, command f"export http_proxy={custom_variables['http_proxy']}; export https_proxy={custom_variables['https_proxy']}; export no_proxy={custom_variables['no_proxy']}")
+        for pod in pods:
+            for container in pod.spec.containers:
+                if container.name == f"node-{port}":
+                    resp = exec_cmd(core_api, pod.metadata.name, container.name, namespace, command f"export http_proxy={custom_variables['http_proxy']}; export https_proxy={custom_variables['https_proxy']}; export no_proxy={custom_variables['no_proxy']}")
         return Response({'objects_created': resp, "port": custom_variables["port"]})
 
 class PodDeleteView(APIView):
