@@ -30,12 +30,6 @@ spec:
               cpu: "0.5"
               memory: 1Gi
           env:
-            - name: http_proxy
-              value: "{{ http_proxy }}"
-            - name: https_proxy
-              value: "{{ https_proxy }}"
-            - name: no_proxy
-              value: "{{ no_proxy }}"
             - name: SE_EVENT_BUS_HOST
               value: selenium-hub-{{ port }}-service
             - name: SE_EVENT_BUS_PUBLISH_PORT
@@ -44,6 +38,10 @@ spec:
               value: "4443"
             - name: SE_NODE_SESSION_TIMEOUT
               value: "{{ se_node_session_timeout }}"
+          lifecycle:
+            postStart:
+              exec:
+                command: ["/bin/sh", "-c", "export http_proxy={{ http_proxy }}; export https_proxy={{ https_proxy }}; export no_proxy={{ no_proxy }}"]
         - name: node-{{ port }}-video
           image: {{ selenium_node_video_image }}
           imagePullSecrets:
