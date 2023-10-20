@@ -48,20 +48,20 @@ def delete_objects(apps_api, core_api, resp, namespace):
     return Response({'deleted': resp})
 
 def get_pods_by_app_label(match_label, namespace):
-        try:
-            api_instance = client.CoreV1Api()
-            # List pods in the specified namespace
-            pod_list = api_instance.list_namespaced_pod(namespace=namespace)
-            # Filter pods by the "app" label (assuming your deployment uses this label)
-            filtered_pods = [pod for pod in pod_list.items if pod.metadata.labels.get("app") == match_label]
-            if filtered_pods:
-                for pod in filtered_pods:
-                    print(f"Pod Name: {pod.metadata.name}")
-            else:
-                print(f"No pods found for deployment: {match_label}")
-        except Exception as e:
-            print(f"Error: {e}")
-        return filtered_pods
+    try:
+        api_instance = client.CoreV1Api()
+        # List pods in the specified namespace
+        pod_list = api_instance.list_namespaced_pod(namespace=namespace)
+        # Filter pods by the "app" label (assuming your deployment uses this label)
+        filtered_pods = [pod for pod in pod_list.items if pod.metadata.labels.get("app") == match_label]
+        if filtered_pods:
+            for pod in filtered_pods:
+                print(f"Pod Name: {pod.metadata.name}")
+        else:
+            print(f"No pods found for deployment: {match_label}")
+    except Exception as e:
+        print(f"Error: {e}")
+    return filtered_pods
 
 def exec_cmd(api_instance, name, container_name, namespace, command):
     exec_command = ["/bin/sh", "-c", command]
