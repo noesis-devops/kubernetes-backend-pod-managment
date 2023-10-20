@@ -47,7 +47,23 @@ def delete_objects(apps_api, core_api, resp, namespace):
         print(f"'{config_map}' deleted successfully.")
     return Response({'deleted': resp})
 
-def exec_cmd(api_instance, command):
+def get_pods_by_app_label(match_label, namespace):
+        try:
+            api_instance = client.CoreV1Api()
+            # List pods in the specified namespace
+            pod_list = api_instance.list_namespaced_pod(namespace=namespace)
+            # Filter pods by the "app" label (assuming your deployment uses this label)
+            filtered_pods = [pod for pod in pod_list.items if pod.metadata.labels.get("app") == match_label]
+            if filtered_pods:
+                for pod in filtered_pods:
+                    print(f"Pod Name: {pod.metadata.name}")
+            else:
+                print(f"No pods found for deployment: {match_label}")
+        except Exception as e:
+            print(f"Error: {e}")
+        return filtered_pods
+
+def exec_cmd(api_instance, name, container_name, namespace, command):
     exec_command = ["/bin/sh", "-c", command]
     resp = stream(api_instance.connect_get_namespaced_pod_exec,
                 name,
@@ -279,7 +295,11 @@ class PodCreateView(APIView):
         #else:
         #    delete_objects(apps_api, core_api, resp, namespace)
         #    return Response({'message': f'Node hasnt been registered'}, status=500)
-        resp = exec_cmd(core_api, f"export http_proxy={custom_variables['http_proxy']}; export https_proxy={custom_variables['https_proxy']}; export no_proxy={custom_variables['no_proxy']}")
+        pods = get_pods_by_app_label("node-" + port, namespace)
+            for pod in pods:
+                for container in pod.spec.containers:
+                    if container.name == f"node-{port}":
+                        resp = exec_cmd(core_api, pod.metadata.name, container.name, namespace, command f"export http_proxy={custom_variables['http_proxy']}; export https_proxy={custom_variables['https_proxy']}; export no_proxy={custom_variables['no_proxy']}")
         return Response({'objects_created': resp, "port": custom_variables["port"]})
 
 class PodDeleteView(APIView):
@@ -303,23 +323,8 @@ class PodDeleteView(APIView):
             return Response({'message': f'Error deleting: {str(e)}'}, status=400)
 
 class PodDeleteViewURL(APIView):
-    def get_pods_by_app_label(self, match_label, namespace):
-        try:
-            api_instance = client.CoreV1Api()
-            # List pods in the specified namespace
-            pod_list = api_instance.list_namespaced_pod(namespace=namespace)
-            # Filter pods by the "app" label (assuming your deployment uses this label)
-            filtered_pods = [pod for pod in pod_list.items if pod.metadata.labels.get("app") == match_label]
-            if filtered_pods:
-                for pod in filtered_pods:
-                    print(f"Pod Name: {pod.metadata.name}")
-            else:
-                print(f"No pods found for deployment: {match_label}")
-        except Exception as e:
-            print(f"Error: {e}")
-        return filtered_pods
     def get_file_name_pod_exec(self, name, container_name, namespace, command, api_instance):        
-        resp = exec_cmd(command)
+        resp = exec_cmd(api_instance, name, container_name, namespace, command)
         while resp.is_open():
             resp.update(timeout=1)
             if resp.peek_stdout():
@@ -402,7 +407,7 @@ class PodDeleteViewURL(APIView):
              # Example usage:
             destination_path = "/tmp/node-" + port + "-video.mp4"  # Local path where the video will be copied
             container_name = "node-"+ port + "-video"
-            pods = self.get_pods_by_app_label("node-" + port, namespace)
+            pods = get_pods_by_app_label("node-" + port, namespace)
             for pod in pods:
                 for container in pod.spec.containers:
                     if container.name == f"node-{port}-video":
