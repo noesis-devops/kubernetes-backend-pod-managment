@@ -47,7 +47,7 @@ def delete_objects(apps_api, core_api, resp, namespace):
         print(f"'{config_map}' deleted successfully.")
     return Response({'deleted': resp})
 
-def exec_cmd(command):
+def exec_cmd(api_instance, command):
     exec_command = ["/bin/sh", "-c", command]
     resp = stream(api_instance.connect_get_namespaced_pod_exec,
                 name,
@@ -58,6 +58,30 @@ def exec_cmd(command):
                 stdout=True, tty=False,
                 _preload_content=False)
     return resp
+
+def check_logs_message(pod_name, container_name, namespace, message):
+    # Create a Kubernetes API client
+    core_api = client.CoreV1Api()
+    # Stream container logs
+    stream = core_api.read_namespaced_pod_log(
+        name=pod_name,
+        namespace=namespace,
+        container=container_name,
+        follow=True,  # This allows you to stream logs in real-time
+        _preload_content=False,
+    )
+    found = False
+    while True:
+        line = stream.readline()
+        if line:
+            print(line)
+            if message in line:
+                found = True
+                break  # Stop the loop when the desired message is found
+
+    stream.close()
+    
+    return found
 
 class PodManagement:
     def get_pods_in_namespace(self, namespace):
@@ -249,7 +273,13 @@ class PodCreateView(APIView):
             else:
                 delete_objects(apps_api, core_api, resp, namespace)
                 return Response({'message': f'Deployment {deployment} did not become ready within the timeout.'}, status=500)
-        resp = exec_cmd(f"export http_proxy={custom_variables['http_proxy']}; export https_proxy={custom_variables['https_proxy']}; export no_proxy={custom_variables['no_proxy']}")
+        #found = check_logs_message(f"node-{custom_variables['port']}", f"node-{custom_variables['port']}", namespace, "registered")
+        #if found:
+         #   resp = exec_cmd(core_api, f"export http_proxy={custom_variables['http_proxy']}; export https_proxy={custom_variables['https_proxy']}; export no_proxy={custom_variables['no_proxy']}")
+        #else:
+        #    delete_objects(apps_api, core_api, resp, namespace)
+        #    return Response({'message': f'Node hasnt been registered'}, status=500)
+        resp = exec_cmd(core_api, f"export http_proxy={custom_variables['http_proxy']}; export https_proxy={custom_variables['https_proxy']}; export no_proxy={custom_variables['no_proxy']}")
         return Response({'objects_created': resp, "port": custom_variables["port"]})
 
 class PodDeleteView(APIView):
