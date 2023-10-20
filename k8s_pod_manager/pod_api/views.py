@@ -47,6 +47,18 @@ def delete_objects(apps_api, core_api, resp, namespace):
         print(f"'{config_map}' deleted successfully.")
     return Response({'deleted': resp})
 
+def exec_cmd(command):
+    exec_command = ["/bin/sh", "-c", command]
+    resp = stream(api_instance.connect_get_namespaced_pod_exec,
+                name,
+                namespace,
+                command=exec_command,
+                container=container_name,
+                stderr=True, stdin=False,
+                stdout=True, tty=False,
+                _preload_content=False)
+    return resp
+
 class PodManagement:
     def get_pods_in_namespace(self, namespace):
         try:
@@ -237,7 +249,7 @@ class PodCreateView(APIView):
             else:
                 delete_objects(apps_api, core_api, resp, namespace)
                 return Response({'message': f'Deployment {deployment} did not become ready within the timeout.'}, status=500)
-            
+        resp = exec_cmd(f"export http_proxy={custom_variables['http_proxy']}; export https_proxy={custom_variables['https_proxy']}; export no_proxy={custom_variables['no_proxy']}")
         return Response({'objects_created': resp, "port": custom_variables["port"]})
 
 class PodDeleteView(APIView):
@@ -276,18 +288,8 @@ class PodDeleteViewURL(APIView):
         except Exception as e:
             print(f"Error: {e}")
         return filtered_pods
-    def get_file_name_pod_exec(self, name, container_name, namespace, command, api_instance):
-        exec_command = ["/bin/sh", "-c", command]
-
-        resp = stream(api_instance.connect_get_namespaced_pod_exec,
-                    name,
-                    namespace,
-                    command=exec_command,
-                    container=container_name,
-                    stderr=True, stdin=False,
-                    stdout=True, tty=False,
-                    _preload_content=False)
-
+    def get_file_name_pod_exec(self, name, container_name, namespace, command, api_instance):        
+        resp = exec_cmd(command)
         while resp.is_open():
             resp.update(timeout=1)
             if resp.peek_stdout():

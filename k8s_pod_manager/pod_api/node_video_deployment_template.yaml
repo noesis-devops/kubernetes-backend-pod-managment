@@ -38,10 +38,6 @@ spec:
               value: "4443"
             - name: SE_NODE_SESSION_TIMEOUT
               value: "{{ se_node_session_timeout }}"
-          lifecycle:
-            postStart:
-              exec:
-                command: ["/bin/sh", "-c", "export http_proxy={{ http_proxy }}; export https_proxy={{ https_proxy }}; export no_proxy={{ no_proxy }}"]
         - name: node-{{ port }}-video
           image: {{ selenium_node_video_image }}
           imagePullSecrets:
