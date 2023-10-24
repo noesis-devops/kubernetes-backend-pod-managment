@@ -303,7 +303,7 @@ class PodCreateView(APIView):
                 print(container.name)
                 if container.name == f"node-{port}":
                     print("found")
-                    exec_resp = exec_cmd(core_api, pod.metadata.name, container.name, namespace, f"export http_proxy={custom_variables['http_proxy']}; export https_proxy={custom_variables['https_proxy']}; export no_proxy={custom_variables['no_proxy']}")
+                    exec_resp = exec_cmd(core_api, pod.metadata.name, container.name, namespace, f"echo http_proxy={custom_variables['http_proxy']} >> ~/.bashrc; echo https_proxy={custom_variables['https_proxy']} ~/.bashrc; echo no_proxy={custom_variables['no_proxy']} ~/.bashrc")
                     print(exec_resp)
                     break
         return Response({'objects_created': resp, "port": custom_variables["port"]})
