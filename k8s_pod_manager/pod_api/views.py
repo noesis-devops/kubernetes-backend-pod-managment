@@ -219,6 +219,20 @@ class PodCreateView(APIView):
                     print({'message': e.body})
                 else:
                     print(f"An error occurred creating service {api_response.metadata.name}:", e)
+            template_path = Path(__file__).with_name('selenium_hub_service_pub_sub_template.yaml')
+            rendered_selenium_hub_service_pub_sub_template = self.substitute_tokens_in_yaml(template_path, custom_variables)
+            try:
+                api_response = core_api.create_namespaced_service(namespace=namespace, body=yaml.safe_load(rendered_selenium_hub_service_pub_sub_template))
+                resp[namespace]["services"].append(api_response.metadata.name)
+                print(f"Service {api_response.metadata.name} created successfully.")
+                succeeds = True
+                break  # If service creation succeeds, exit the loop
+            except client.exceptions.ApiException as e:
+                succeeds = False
+                if e.status == 422 and "port is already allocated" in e.body:
+                    print({'message': e.body})
+                else:
+                    print(f"An error occurred creating service {api_response.metadata.name}:", e)
                                
         if record_video:
             template_path = Path(__file__).with_name('video-cm.yaml')
