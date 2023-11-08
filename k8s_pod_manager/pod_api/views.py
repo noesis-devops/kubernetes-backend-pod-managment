@@ -295,18 +295,18 @@ class PodCreateView(APIView):
         #else:
         #    delete_objects(apps_api, core_api, resp, namespace)
         #    return Response({'message': f'Node hasnt been registered'}, status=500)
-        pods = get_pods_by_app_label(f"node-{port}", namespace)
-        print(pods)
-        for pod in pods:
-            print(pod.metadata.name)
-            for container in pod.spec.containers:
-                print(container.name)
-                if container.name == f"node-{port}":
-                    print("found")
-                    exec_resp = exec_cmd(core_api, pod.metadata.name, container.name, namespace, f"echo \"export http_proxy={custom_variables['http_proxy']}\nexport https_proxy={custom_variables['https_proxy']}\nexport no_proxy={custom_variables['no_proxy']}\" >> ~/.bashrc")
-                    exec_resp = exec_cmd(core_api, pod.metadata.name, container.name, namespace, f". ~/.bashrc")
-                    print(exec_resp)
-                    break
+        #pods = get_pods_by_app_label(f"node-{port}", namespace)
+        #print(pods)
+        #for pod in pods:
+        #    print(pod.metadata.name)
+        #    for container in pod.spec.containers:
+        #        print(container.name)
+        #        if container.name == f"node-{port}":
+        #            print("found")
+        #            exec_resp = exec_cmd(core_api, pod.metadata.name, container.name, namespace, f"echo \"export http_proxy={custom_variables['http_proxy']}\nexport https_proxy={custom_variables['https_proxy']}\nexport no_proxy={custom_variables['no_proxy']}\" >> ~/.bashrc")
+        #            exec_resp = exec_cmd(core_api, pod.metadata.name, container.name, namespace, f". ~/.bashrc")
+        #            print(exec_resp)
+        #            break
         return Response({'objects_created': resp, "port": custom_variables["port"]})
 
 class PodDeleteView(APIView):

@@ -30,8 +30,14 @@ spec:
               cpu: "0.5"
               memory: 1Gi
           env:
+            - name: HTTP_PROXY
+              value: "{{ http_proxy }}"
+            - name: HTTPS_PROXY
+              value: "{{ https_proxy }}"
+            - name: NO_PROXY
+              value: "{{ no_proxy }}"
             - name: SE_EVENT_BUS_HOST
-              value: selenium-hub-{{ port }}-service
+              value: selenium-hub-{{ port }}-service-pub-sub
             - name: SE_EVENT_BUS_PUBLISH_PORT
               value: "4442"
             - name: SE_EVENT_BUS_SUBSCRIBE_PORT

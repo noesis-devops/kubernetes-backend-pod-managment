@@ -1,6 +1,24 @@
 apiVersion: v1
 kind: Service
 metadata:
+  name: selenium-hub-{{ port }}-service-pub-sub
+spec:
+  selector:
+    app: selenium-hub-{{ port }}
+  ports:
+    - protocol: TCP
+      port: 4442
+      targetPort: 4442
+      name: publish
+    - protocol: TCP
+      port: 4443
+      targetPort: 4443
+      name: subscribe
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
   name: selenium-hub-{{ port }}-service
 spec:
   selector:
@@ -11,12 +29,4 @@ spec:
       targetPort: 4444
       nodePort: {{ port }}
       name: hub
-    - protocol: TCP
-      port: 4442
-      targetPort: 4442
-      name: publish
-    - protocol: TCP
-      port: 4443
-      targetPort: 4443
-      name: subscribe
   type: NodePort
