@@ -265,7 +265,12 @@ class PodCreateView(APIView):
             api_response = apps_api.create_namespaced_deployment(namespace, yaml.safe_load(rendered_selenium_hub_deployment_template))
             resp[namespace]["deployments"].append(api_response.metadata.name)
             print(f"Deployment {api_response.metadata.name} created successfully.")
-            succeeds = True
+
+            ready = wait_for_deployment_ready(apps_api, namespace, api_response.metadata.name, timeout_seconds=create_timeout)
+            if not ready:
+                succeeds = False
+            else:
+                succeeds = True
         except client.exceptions.ApiException as e:
             succeeds = False
             if e.status == 409 and e.reason == "AlreadyExists":
@@ -283,7 +288,12 @@ class PodCreateView(APIView):
             api_response = apps_api.create_namespaced_deployment(namespace, yaml.safe_load(rendered_node_deployment_template))
             resp[namespace]["deployments"].append(api_response.metadata.name)
             print(f"Deployment {api_response.metadata.name} created successfully.")
-            succeeds = True
+
+            ready = wait_for_deployment_ready(apps_api, namespace, api_response.metadata.name, timeout_seconds=create_timeout)
+            if not ready:
+                succeeds = False
+            else:
+                succeeds = True
         except client.exceptions.ApiException as e:
             succeeds = False
             if e.status == 409 and e.reason == "AlreadyExists":
@@ -295,13 +305,16 @@ class PodCreateView(APIView):
             delete_objects(apps_api, core_api, resp, namespace)
             return Response({'message': f'Deployments or services cannot be created: {resp}'}, status=500)
         
-        for deployment in resp[namespace]["deployments"]:
-            ready = wait_for_deployment_ready(apps_api, namespace, deployment, timeout_seconds=create_timeout)
-            if ready:
-                continue
-            else:
-                delete_objects(apps_api, core_api, resp, namespace)
-                return Response({'message': f'Deployment {deployment} did not become ready within the timeout.'}, status=500)
+        #v1.4.29
+        #for deployment in resp[namespace]["deployments"]:
+        #    ready = wait_for_deployment_ready(apps_api, namespace, deployment, timeout_seconds=create_timeout)
+        #    if ready:
+        #        continue
+        #    else:
+        #        delete_objects(apps_api, core_api, resp, namespace)
+        #        return Response({'message': f'Deployment {deployment} did not become ready within the timeout.'}, status=500)
+
+
         #found = check_logs_message(f"node-{custom_variables['port']}", f"node-{custom_variables['port']}", namespace, "registered")
         #if found:
          #   resp = exec_cmd(core_api, f"export http_proxy={custom_variables['http_proxy']}; export https_proxy={custom_variables['https_proxy']}; export no_proxy={custom_variables['no_proxy']}")
