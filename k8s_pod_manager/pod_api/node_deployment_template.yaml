@@ -44,6 +44,8 @@ spec:
               value: "4443"
             - name: SE_NODE_SESSION_TIMEOUT
               value: "{{ se_node_session_timeout }}"
+      imagePullSecrets:
+            - name: testingon-api-pod-management-pull-secret
       volumes:
         - name: dshm
           emptyDir:

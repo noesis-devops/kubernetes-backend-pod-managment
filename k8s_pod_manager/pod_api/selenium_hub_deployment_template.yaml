@@ -43,5 +43,6 @@ spec:
           env:
             - name: SE_SUB_PATH
               value: /
-
+      imagePullSecrets:
+            - name: testingon-api-pod-management-pull-secret
 
