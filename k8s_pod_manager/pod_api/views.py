@@ -66,10 +66,10 @@ def get_pods_by_app_label(match_label, namespace):
 def proxy_view(request, port):
     selenium_grid_url = f'http://10.255.0.150:{port}/wd/hub'
     
-    match = re.match(r'/api/proxy/(\d+)(/.*)?', request.path)
+    #match = re.match(r'/api/proxy/(\d+)(/.*)?', request.path)
     if match:
-        path_suffix = match.group(2) or ''
-        grid_url = selenium_grid_url + path_suffix
+        #path_suffix = match.group(2) or ''
+        grid_url = selenium_grid_url
     else:
         return JsonResponse({'error': 'Invalid path format'}, status=400)
 
