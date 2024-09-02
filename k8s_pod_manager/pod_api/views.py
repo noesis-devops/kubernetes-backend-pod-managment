@@ -65,15 +65,11 @@ def get_pods_by_app_label(match_label, namespace):
     return filtered_pods
 
 @csrf_exempt
-def proxy_view(request, port, subpath):
-    selenium_grid_url = f'http://10.255.0.150:{port}/wd/hub/session/{subpath}'
+def proxy_view(request, port, subpath=''):
     
-    #match = re.match(r'/api/proxy/(\d+)(/.*)?', request.path)
-    #if match:
-    #    path_suffix = match.group(2) or ''
-    #    grid_url = selenium_grid_url
-   # else:
-   #     return JsonResponse({'error': 'Invalid path format'}, status=400)
+    base_url = f'http://10.255.0.150:{port}/wd/hub/session'
+    
+    selenium_grid_url = f'{base_url}/{subpath}' if subpath else base_url
 
     try:
         response = requests.request(
