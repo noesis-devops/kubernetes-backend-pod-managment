@@ -66,7 +66,7 @@ def get_pods_by_app_label(match_label, namespace):
 
 @csrf_exempt
 def proxy_view(request, port):
-    selenium_grid_url = f'http://10.255.0.150:{port}'
+    selenium_grid_url = f'http://10.255.0.150:{port}/wd/hub/session'
     
     #match = re.match(r'/api/proxy/(\d+)(/.*)?', request.path)
     #if match:
