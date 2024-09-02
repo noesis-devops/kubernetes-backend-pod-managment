@@ -8,8 +8,8 @@ from kubernetes import client, config
 from kubernetes.stream import stream
 from jinja2 import Template
 from pathlib import Path
-import yaml, time, re, os, subprocess, tarfile, base64
-from django.http import HttpResponse
+import yaml, time, re, os, subprocess, tarfile, base64, requests
+from django.http import HttpResponse, JsonResponse
 from tempfile import TemporaryFile
 from kubernetes.client.rest import ApiException
 from os import path
@@ -62,6 +62,34 @@ def get_pods_by_app_label(match_label, namespace):
     except Exception as e:
         print(f"Error: {e}")
     return filtered_pods
+
+def proxy_view(request, port):
+    selenium_grid_url = f'http://10.255.0.150:{port}/wd/hub'
+    
+    match = re.match(r'/api/proxy/(\d+)(/.*)?', request.path)
+    if match:
+        path_suffix = match.group(2) or ''
+        grid_url = selenium_grid_url + path_suffix
+    else:
+        return JsonResponse({'error': 'Invalid path format'}, status=400)
+
+    try:
+        response = requests.request(
+            method=request.method,
+            url=grid_url,
+            headers={key: value for key, value in request.headers.items() if key != 'Host'},
+            data=request.body,
+            params=request.GET
+        )
+        
+        return HttpResponse(
+            content=response.content,
+            status=response.status_code,
+            content_type=response.headers.get('Content-Type', 'application/json')
+        )
+    
+    except requests.RequestException as e:
+        return JsonResponse({'error': str(e)}, status=500)
 
 def exec_cmd(api_instance, name, container_name, namespace, command):
     exec_command = ["/bin/sh", "-c", command]
