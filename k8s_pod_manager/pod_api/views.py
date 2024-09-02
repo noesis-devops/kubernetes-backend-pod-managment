@@ -10,6 +10,7 @@ from jinja2 import Template
 from pathlib import Path
 import yaml, time, re, os, subprocess, tarfile, base64, requests
 from django.http import HttpResponse, JsonResponse
+from django.views.decorators.csrf import csrf_exempt
 from tempfile import TemporaryFile
 from kubernetes.client.rest import ApiException
 from os import path
@@ -63,6 +64,7 @@ def get_pods_by_app_label(match_label, namespace):
         print(f"Error: {e}")
     return filtered_pods
 
+@csrf_exempt
 def proxy_view(request, port):
     selenium_grid_url = f'http://10.255.0.150:{port}/wd/hub'
     
