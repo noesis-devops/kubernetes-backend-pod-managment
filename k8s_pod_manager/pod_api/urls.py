@@ -7,6 +7,6 @@ urlpatterns = [
     path('create/', PodCreateView.as_view(), name='create-pod'),
     #path('delete/', PodDeleteView.as_view(), name='delete-pod'),
     path('delete/<str:namespace>/<str:port>/', PodDeleteViewURL.as_view(), name='delete-pod2'),
-    path('api/proxy/<int:port>/', proxy_view, name='proxy_view'),
+    path('api/proxy/<int:port>/session/', proxy_view, name='proxy_view'),
 
 ]
