@@ -195,6 +195,8 @@ class PodCreateView(APIView):
             create_timeout = 60
             
         default_selenium_hub_image = 'selenium/hub:4.1.2'
+        default_appium_server_image = 'appium/appium:latest'
+        default_android_image = 'halimqarroum/docker-android:api-28'
         default_selenium_node_image = 'selenium/node-chrome:4.1.2'
         default_se_node_session_timeout = 300  # Default timeout in seconds
         default_selenium_node_video_image = 'ghcr.io/noesis-devops/kubernetes-backend-pod-managment/selenium/video:1.0.1'
@@ -212,6 +214,8 @@ class PodCreateView(APIView):
             'selenium_hub_image': default_selenium_hub_image,
             'selenium_node_image': default_selenium_node_image,
             'selenium_node_video_image': default_selenium_node_video_image,
+            'appium_server_image': default_appium_server_image,
+            'android_emulator_image': default_android_image,
             #'selenium_hub_image': request.data.get('selenium-hub-image', default_selenium_hub_image),
             #'selenium_node_image': request.data.get('selenium-node-image', default_selenium_node_image),
             #'selenium_node_video_image': request.data.get('selenium-node-video-image', default_selenium_node_video_image),
@@ -222,22 +226,30 @@ class PodCreateView(APIView):
         }
         
         return namespace, start_port, end_port, record_video, create_timeout, custom_variables
-    def post(self, request):
-        # Load Kubernetes configuration
-        config.load_incluster_config()
-        namespace, start_port, end_port, record_video, create_timeout, custom_variables = self.set_custom_variables(request)
-        core_api = client.CoreV1Api()
-        apps_api = client.AppsV1Api()
+    
+def post(self, request):
+    # Load Kubernetes configuration
+    config.load_incluster_config()
+    namespace, start_port, end_port, record_video, create_timeout, custom_variables = self.set_custom_variables(request)
+    core_api = client.CoreV1Api()
+    apps_api = client.AppsV1Api()
+    
+    resp = {
+        namespace: {
+            "deployments": [],
+            "services": [],
+            "config_maps": []
+        }
+    }
+    
+    succeeds = False
+    api_response = None
+    
+    for port in range(start_port, end_port):
+        custom_variables["port"] = port
         
-        resp = {namespace: {"deployments": [], "services": [], "config_maps": []}}
-        
-        succeeds = False
-        
-        api_response = None
-        
-        
-        for port in range(start_port, end_port):
-            custom_variables["port"] = port
+
+        if request.data.get('create_selenium_hub'):
             template_path = Path(__file__).with_name('selenium_hub_service_template.yaml')
             rendered_selenium_hub_service_template = self.substitute_tokens_in_yaml(template_path, custom_variables)
             try:
@@ -245,128 +257,110 @@ class PodCreateView(APIView):
                 resp[namespace]["services"].append(api_response.metadata.name)
                 print(f"Service {api_response.metadata.name} created successfully.")
                 succeeds = True
-                break  # If service creation succeeds, exit the loop
+                break
             except client.exceptions.ApiException as e:
                 succeeds = False
                 if e.status == 422 and "port is already allocated" in e.body:
                     print({'message': e.body})
                 else:
                     print(f"An error occurred creating service {api_response.metadata.name}:", e)
-                               
+                    
+            template_path = Path(__file__).with_name('node_service_template.yaml')
+            rendered_node_service_template = self.substitute_tokens_in_yaml(template_path, custom_variables)
+            try:
+                api_response = core_api.create_namespaced_service(namespace=namespace, body=yaml.safe_load(rendered_node_service_template))
+                resp[namespace]["services"].append(api_response.metadata.name)
+                print(f"Service {api_response.metadata.name} created successfully.")
+                succeeds = True
+            except client.exceptions.ApiException as e:
+                    succeeds = False
+                    if e.status == 422 and "port is already allocated" in e.body:
+                        print({'message': e.body})
+                    else:
+                        print(f"An error occurred creating service {api_response.metadata.name}:", e)
+
         if record_video:
             template_path = Path(__file__).with_name('video-cm.yaml')
             rendered_video_config_map_template = self.substitute_tokens_in_yaml(template_path, custom_variables)
             try:
                 api_response = core_api.create_namespaced_config_map(namespace=namespace, body=yaml.safe_load(rendered_video_config_map_template))
-                #resp[namespace]["services"].append(api_response.metadata.name)
+                resp[namespace]["config_maps"].append(api_response.metadata.name)
                 print(f"Config Map video-cm-{custom_variables['port']} created successfully.")
                 succeeds = True
             except client.exceptions.ApiException as e:
                 succeeds = False
                 print(f"An error occurred creating config map {api_response.metadata.name}:", e)
 
-        template_path = Path(__file__).with_name('node_service_template.yaml')
-        rendered_node_service_template = self.substitute_tokens_in_yaml(template_path, custom_variables)
-        try:
-            api_response = core_api.create_namespaced_service(namespace=namespace, body=yaml.safe_load(rendered_node_service_template))
-            resp[namespace]["services"].append(api_response.metadata.name)
-            print(f"Service {api_response.metadata.name} created successfully.")
-            succeeds = True
-        except client.exceptions.ApiException as e:
+
+        if request.data.get('create_mobile_tests'):
+            template_path = Path(__file__).with_name('android_service_template.yaml')
+            rendered_android_service_template = self.substitute_tokens_in_yaml(template_path, custom_variables)
+            try:
+                api_response = core_api.create_namespaced_service(namespace=namespace, body=yaml.safe_load(rendered_android_service_template))
+                resp[namespace]["services"].append(api_response.metadata.name)
+                print(f"Service {api_response.metadata.name} created successfully.")
+                succeeds = True
+            except client.exceptions.ApiException as e:
                 succeeds = False
                 if e.status == 422 and "port is already allocated" in e.body:
                     print({'message': e.body})
                 else:
                     print(f"An error occurred creating service {api_response.metadata.name}:", e)
-        template_path = Path(__file__).with_name('selenium_hub_service_pub_sub_template.yaml')
-        rendered_selenium_hub_service_pub_sub_template = self.substitute_tokens_in_yaml(template_path, custom_variables)
-        try:
-            api_response = core_api.create_namespaced_service(namespace=namespace, body=yaml.safe_load(rendered_selenium_hub_service_pub_sub_template))
-            resp[namespace]["services"].append(api_response.metadata.name)
-            print(f"Service {api_response.metadata.name} created successfully.")
-            succeeds = True
-        except client.exceptions.ApiException as e:
+
+            template_path = Path(__file__).with_name('appium_service_template.yaml')
+            rendered_appium_service_template = self.substitute_tokens_in_yaml(template_path, custom_variables)
+            try:
+                api_response = core_api.create_namespaced_service(namespace=namespace, body=yaml.safe_load(rendered_appium_service_template))
+                resp[namespace]["services"].append(api_response.metadata.name)
+                print(f"Service {api_response.metadata.name} created successfully.")
+                succeeds = True
+            except client.exceptions.ApiException as e:
                 succeeds = False
                 if e.status == 422 and "port is already allocated" in e.body:
                     print({'message': e.body})
                 else:
                     print(f"An error occurred creating service {api_response.metadata.name}:", e)
-        
-        try:
-            template_path = Path(__file__).with_name('selenium_hub_deployment_template.yaml')
-            rendered_selenium_hub_deployment_template = self.substitute_tokens_in_yaml(template_path, custom_variables)
-            api_response = apps_api.create_namespaced_deployment(namespace, yaml.safe_load(rendered_selenium_hub_deployment_template))
-            resp[namespace]["deployments"].append(api_response.metadata.name)
-            print(f"Deployment {api_response.metadata.name} created successfully.")
-
-            ready = wait_for_deployment_ready(apps_api, namespace, api_response.metadata.name, timeout_seconds=create_timeout)
-            if not ready:
+            
+            template_path = Path(__file__).with_name('android_deployment_template.yaml')
+            rendered_android_deployment_template = self.substitute_tokens_in_yaml(template_path, custom_variables)
+            try:
+                api_response = apps_api.create_namespaced_deployment(namespace, yaml.safe_load(rendered_android_deployment_template))
+                resp[namespace]["deployments"].append(api_response.metadata.name)
+                print(f"Deployment {api_response.metadata.name} created successfully.")
+                ready = wait_for_deployment_ready(apps_api, namespace, api_response.metadata.name, timeout_seconds=create_timeout)
+                if not ready:
+                    succeeds = False
+                else:
+                    succeeds = True
+            except client.exceptions.ApiException as e:
                 succeeds = False
-            else:
-                succeeds = True
-        except client.exceptions.ApiException as e:
-            succeeds = False
-            if e.status == 409 and e.reason == "AlreadyExists":
-                print(f"message: {e.message}")
-            else:
-                print(f"An error occurred creating deployment {api_response.metadata.name}:", e)
-        
-        
-        try:
-            if record_video:
-                template_path = Path(__file__).with_name('node_video_deployment_template.yaml')
-            else:
-                template_path = Path(__file__).with_name('node_deployment_template.yaml')
-            rendered_node_deployment_template = self.substitute_tokens_in_yaml(template_path, custom_variables)
-            api_response = apps_api.create_namespaced_deployment(namespace, yaml.safe_load(rendered_node_deployment_template))
-            resp[namespace]["deployments"].append(api_response.metadata.name)
-            print(f"Deployment {api_response.metadata.name} created successfully.")
+                if e.status == 409 and e.reason == "AlreadyExists":
+                    print(f"Deployment {api_response.metadata.name} already exists.")
+                else:
+                    print(f"An error occurred creating deployment {api_response.metadata.name}:", e)
 
-            ready = wait_for_deployment_ready(apps_api, namespace, api_response.metadata.name, timeout_seconds=create_timeout)
-            if not ready:
+            template_path = Path(__file__).with_name('appium_deployment_template.yaml')
+            rendered_appium_deployment_template = self.substitute_tokens_in_yaml(template_path, custom_variables)
+            try:
+                api_response = apps_api.create_namespaced_deployment(namespace, yaml.safe_load(rendered_appium_deployment_template))
+                resp[namespace]["deployments"].append(api_response.metadata.name)
+                print(f"Deployment {api_response.metadata.name} created successfully.")
+                ready = wait_for_deployment_ready(apps_api, namespace, api_response.metadata.name, timeout_seconds=create_timeout)
+                if not ready:
+                    succeeds = False
+                else:
+                    succeeds = True
+            except client.exceptions.ApiException as e:
                 succeeds = False
-            else:
-                succeeds = True
-        except client.exceptions.ApiException as e:
-            succeeds = False
-            if e.status == 409 and e.reason == "AlreadyExists":
-                print(f"Deployment {api_response.metadata.name} already exists.")
-            else:
-                print(f"An error occurred creating deployment {api_response.metadata.name}:", e)
-        
-        if succeeds == False:
-            delete_objects(apps_api, core_api, resp, namespace)
-            return Response({'message': f'Deployments or services cannot be created: {resp}'}, status=500)
-        
-        #v1.4.29
-        #for deployment in resp[namespace]["deployments"]:
-        #    ready = wait_for_deployment_ready(apps_api, namespace, deployment, timeout_seconds=create_timeout)
-        #    if ready:
-        #        continue
-        #    else:
-        #        delete_objects(apps_api, core_api, resp, namespace)
-        #        return Response({'message': f'Deployment {deployment} did not become ready within the timeout.'}, status=500)
+                if e.status == 409 and e.reason == "AlreadyExists":
+                    print(f"Deployment {api_response.metadata.name} already exists.")
+                else:
+                    print(f"An error occurred creating deployment {api_response.metadata.name}:", e)
+    
+    if not succeeds:
+        delete_objects(apps_api, core_api, resp, namespace)
+        return Response({'message': f'Deployments or services cannot be created: {resp}'}, status=500)
 
-
-        #found = check_logs_message(f"node-{custom_variables['port']}", f"node-{custom_variables['port']}", namespace, "registered")
-        #if found:
-         #   resp = exec_cmd(core_api, f"export http_proxy={custom_variables['http_proxy']}; export https_proxy={custom_variables['https_proxy']}; export no_proxy={custom_variables['no_proxy']}")
-        #else:
-        #    delete_objects(apps_api, core_api, resp, namespace)
-        #    return Response({'message': f'Node hasnt been registered'}, status=500)
-        #pods = get_pods_by_app_label(f"node-{port}", namespace)
-        #print(pods)
-        #for pod in pods:
-        #    print(pod.metadata.name)
-        #    for container in pod.spec.containers:
-        #        print(container.name)
-        #        if container.name == f"node-{port}":
-        #            print("found")
-        #            exec_resp = exec_cmd(core_api, pod.metadata.name, container.name, namespace, f"echo \"export http_proxy={custom_variables['http_proxy']}\nexport https_proxy={custom_variables['https_proxy']}\nexport no_proxy={custom_variables['no_proxy']}\" >> ~/.bashrc")
-        #            exec_resp = exec_cmd(core_api, pod.metadata.name, container.name, namespace, f". ~/.bashrc")
-        #            print(exec_resp)
-        #            break
-        return Response({'objects_created': resp, "port": custom_variables["port"]})
 
 class PodDeleteView(APIView):
     def delete(self, request):

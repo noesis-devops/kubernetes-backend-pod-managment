@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: android-emulator-hub-{{ port }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: android-emulator-hub-{{ port }}
+  template:
+    metadata:
+      labels:
+        app: android-emulator-hub-{{ port }}
+    spec:
+      containers:
+        - name: android-emulator-hub-{{ port }}
+          image: {{ android_emulator_image }}
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5555
+              name: adb
+          livenessProbe:
+            tcpSocket:
+              port: 5555
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3

@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: appium-server-hub-{{ port }}
+  replicas: 1
+  selector:
+    matchLabels:
+      app: appium-server-hub-{{ port }}
+  template:
+    metadata:
+      labels:
+        app: appium-server-hub-{{ port }}
+    spec:
+      containers:
+        - name: appium-server-hub-{{ port }}
+          image: {{ appium_server_image }}
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 4723
+              name: appium
+          livenessProbe:
+            httpGet:
+              path: /wd/hub/status
+              port: 4723
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
