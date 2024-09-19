@@ -97,7 +97,15 @@ def proxy_view(request, port, subpath=''):
             data=request.body,
             params=request.GET
         )
-        
+
+        logger.info(f"Proxying request to {selenium_grid_url} with status code {response.status_code}")
+        logger.debug(f"Request body: {request.body}")
+        logger.debug(f"Response body: {response.text}")
+
+        if response.status_code != 200:
+            logger.error(f"Error in response: {response.status_code} - {response.text}")
+            return JsonResponse({'error': response.text}, status=response.status_code)
+    
         return HttpResponse(
             content=response.content,
             status=response.status_code,
@@ -105,20 +113,29 @@ def proxy_view(request, port, subpath=''):
         )
     
     except requests.RequestException as e:
+        logger.exception(f"RequestException while proxying request to {selenium_grid_url}: {str(e)}")
         return JsonResponse({'error': str(e)}, status=500)
 
 @csrf_exempt
-def proxy_delete(self, request, namespace, port):
+def proxy_delete(request, namespace, port):
     load_balancer_ip = cache.get('load_balancer_ip', '10.255.0.150')
     base_url = f'http://{load_balancer_ip}:32010/api/delete/{namespace}/{port}/'
 
     try:
+        logger.info(f"Proxying DELETE request to {base_url}")
+
         response = requests.delete(
             url=base_url,
             headers={key: value for key, value in request.headers.items() if key != 'Host'},
-            data=request.body,
             params=request.GET
         )
+
+        logger.info(f"DELETE response status: {response.status_code} from {base_url}")
+        logger.debug(f"Response content: {response.text}")
+
+        if response.status_code != 200:
+            logger.error(f"Error in DELETE response: {response.status_code} - {response.text}")
+            return JsonResponse({'error': response.text}, status=response.status_code)
 
         return HttpResponse(
             content=response.content,
@@ -127,6 +144,7 @@ def proxy_delete(self, request, namespace, port):
         )
 
     except requests.RequestException as e:
+        logger.exception(f"RequestException while proxying DELETE to {base_url}: {str(e)}")
         return JsonResponse({'error': str(e)}, status=500)
 
 def exec_cmd(api_instance, name, container_name, namespace, command):
