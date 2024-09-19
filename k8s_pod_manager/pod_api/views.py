@@ -88,30 +88,36 @@ def proxy_view(request, port, subpath=''):
     load_balancer_ip = cache.get('load_balancer_ip', '10.255.0.150')
     base_url = f'http://{load_balancer_ip}:{port}/wd/hub/session'
     
+    if subpath.startswith('/'):
+        subpath = subpath[1:]
+        
     selenium_grid_url = f'{base_url}/{subpath}' if subpath else base_url
 
     try:
-        
-        logger.info(f"Attempting request to {selenium_grid_url} with method {request.method}")
+        excluded_headers = ['host', 'content-length', 'transfer-encoding', 'connection']
+        headers = {key: value for key, value in request.headers.items() if key.lower() not in excluded_headers}
+        data = request.body if request.method in ['POST', 'PUT', 'PATCH'] else None
+
+        logger.info(f"Proxying {request.method} request to {selenium_grid_url}")
+        logger.debug(f"Request headers: {headers}")
+        logger.debug(f"Request params: {request.GET}")
+        if data:
+            logger.debug(f"Request body: {data.decode('utf-8')}")
+
         response = requests.request(
             method=request.method,
             url=selenium_grid_url,
-            headers={key: value for key, value in request.headers.items() if key != 'Host'},
-            data=request.body,
+            headers=headers,
+            data=data,
             params=request.GET
         )
 
-        logger.info(f"Proxying request to {selenium_grid_url} with status code {response.status_code}")
-        logger.debug(f"Request body: {request.body}")
-        response_text = response.text
-        logger.debug(f"Response body: {response_text}")
-
-        if response.status_code != 200:
-            logger.error(f"Error in response: {response.status_code} - {response_text}")
-            return JsonResponse({'error': response_text}, status=response.status_code)
+        logger.info(f"Received response with status code {response.status_code} from {selenium_grid_url}")
+        logger.debug(f"Response headers: {response.headers}")
+        logger.debug(f"Response body: {response.text}")
 
         return HttpResponse(
-            content=response_text,
+            content=response.content,
             status=response.status_code,
             content_type=response.headers.get('Content-Type')
         )
@@ -123,30 +129,51 @@ def proxy_view(request, port, subpath=''):
 @csrf_exempt
 def proxy_delete(request, namespace, port):
     load_balancer_ip = cache.get('load_balancer_ip', '10.255.0.150')
+    
+    # Construct the base URL dynamically
     base_url = f'http://{load_balancer_ip}:32010/api/delete/{namespace}/{port}/'
-
+    
     try:
-        logger.info(f"Proxying DELETE request to {base_url}")
+        excluded_headers = ['host', 'content-length', 'transfer-encoding', 'connection']
+        headers = {key: value for key, value in request.headers.items() if key.lower() not in excluded_headers}
+        
+        data = request.body if request.method in ['POST', 'PUT', 'PATCH', 'DELETE'] else None
+
+        logger.info(f"Proxying {request.method} request to {base_url}")
+        logger.debug(f"Request headers: {headers}")
+        logger.debug(f"Request params: {request.GET}")
+        if data:
+            try:
+                logger.debug(f"Request body: {data.decode('utf-8')}")
+            except UnicodeDecodeError:
+                logger.debug("Request body contains non-UTF-8 bytes.")
+
 
         response = requests.delete(
             url=base_url,
-            headers={key: value for key, value in request.headers.items() if key != 'Host'},
-            params=request.GET
+            headers=headers,
+            params=request.GET,
+            data=data,
+            timeout=30
         )
 
-        logger.info(f"DELETE response status: {response.status_code} from {base_url}")
-        response_text = response.text
-        logger.debug(f"Response content: {response_text}")
-
-        if response.status_code != 200:
-            logger.error(f"Error in DELETE response: {response.status_code} - {response_text}")
-            return JsonResponse({'error': response_text}, status=response.status_code)
+        logger.info(f"Received response with status code {response.status_code} from {base_url}")
+        logger.debug(f"Response headers: {response.headers}")
+        logger.debug(f"Response body: {response.text}")
 
         return HttpResponse(
-            content=response_text,
+            content=response.content,
             status=response.status_code,
             content_type=response.headers.get('Content-Type', 'application/json')
         )
+
+    except requests.Timeout:
+        logger.error(f"Request to {base_url} timed out.")
+        return JsonResponse({'error': 'Request timed out.'}, status=504)
+
+    except requests.ConnectionError as e:
+        logger.exception(f"Connection error while proxying DELETE to {base_url}: {str(e)}")
+        return JsonResponse({'error': 'Connection error.'}, status=502)
 
     except requests.RequestException as e:
         logger.exception(f"RequestException while proxying DELETE to {base_url}: {str(e)}")
