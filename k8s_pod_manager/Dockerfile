@@ -25,5 +25,5 @@ ENV KUBECONFIG=/app/config/kubeconfig
 EXPOSE 8000
 
 # Command to run the application
-CMD ["daphne", "-b", "0.0.0.0", "-p", "8000", "k8s_pod_manager.asgi:application"]
+CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
 
