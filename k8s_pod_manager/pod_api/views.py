@@ -8,8 +8,9 @@ from kubernetes import client, config
 from kubernetes.stream import stream
 from jinja2 import Template
 from pathlib import Path
-import yaml, time, re, os, subprocess, tarfile, base64, requests, logging
+import yaml, time, re, os, subprocess, tarfile, base64, requests, logging, asyncio
 from django.http import HttpResponse, JsonResponse
+from asgiref.sync import sync_to_async
 from django.views.decorators.csrf import csrf_exempt
 from tempfile import TemporaryFile
 from kubernetes.client.rest import ApiException
@@ -91,7 +92,7 @@ def proxy_view(request, port, subpath=''):
     selenium_grid_url = f'{base_url}/{subpath}' if subpath else base_url
 
     try:
-        response = requests.request(
+        response = await sync_to_async(requests.request)(
             method=request.method,
             url=selenium_grid_url,
             headers={key: value for key, value in request.headers.items() if key != 'Host'},
@@ -125,7 +126,7 @@ def proxy_delete(request, namespace, port):
     try:
         logger.info(f"Proxying DELETE request to {base_url}")
 
-        response = requests.delete(
+        response = await sync_to_async(requests.delete)(
             url=base_url,
             headers={key: value for key, value in request.headers.items() if key != 'Host'},
             params=request.GET
