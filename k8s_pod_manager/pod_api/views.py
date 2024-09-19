@@ -107,6 +107,28 @@ def proxy_view(request, port, subpath=''):
     except requests.RequestException as e:
         return JsonResponse({'error': str(e)}, status=500)
 
+@csrf_exempt
+def proxy_delete(self, request, namespace, port):
+    load_balancer_ip = cache.get('load_balancer_ip', '10.255.0.150')
+    base_url = f'http://{load_balancer_ip}:32010/api/delete/{namespace}/{port}/'
+
+    try:
+        response = requests.delete(
+            url=base_url,
+            headers={key: value for key, value in request.headers.items() if key != 'Host'},
+            data=request.body,
+            params=request.GET
+        )
+
+        return HttpResponse(
+            content=response.content,
+            status=response.status_code,
+            content_type=response.headers.get('Content-Type', 'application/json')
+        )
+
+    except requests.RequestException as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
 def exec_cmd(api_instance, name, container_name, namespace, command):
     exec_command = ["/bin/sh", "-c", command]
     resp = stream(api_instance.connect_get_namespaced_pod_exec,

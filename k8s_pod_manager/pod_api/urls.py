@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import PodListView, PodCreateView, PodDeleteView, PodsInNamespaceView, PodDeleteViewURL, proxy_view, update_load_balancer_ip
+from .views import PodListView, PodCreateView, PodDeleteView, PodsInNamespaceView, PodDeleteViewURL, proxy_view, update_load_balancer_ip, proxy_delete
 
 urlpatterns = [
     path('pods/', PodListView.as_view(), name='pod-list'),
@@ -11,5 +11,6 @@ urlpatterns = [
     path('proxy/<int:port>/session/<path:subpath>', proxy_view, name='proxy_view'),
     
     path('update-load-balancer-ip/', update_load_balancer_ip, name='update-load-balancer-ip'),
+    path('proxy/delete/<str:namespace>/<int:port>/', proxy_delete, name='proxy_delete'),
 
 ]
