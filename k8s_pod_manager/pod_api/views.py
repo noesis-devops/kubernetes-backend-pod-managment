@@ -16,6 +16,7 @@ from kubernetes.client.rest import ApiException
 from os import path
 from django.core.cache import cache
 
+logger = logging.getLogger(__name__)
 
 def load_kubernetes_config():
     try:
