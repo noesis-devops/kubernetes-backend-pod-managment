@@ -85,7 +85,7 @@ def get_pods_by_app_label(match_label, namespace):
     return filtered_pods
 
 @csrf_exempt
-def proxy_view(request, port, subpath=''):
+await def proxy_view(request, port, subpath=''):
     load_balancer_ip = cache.get('load_balancer_ip', '10.255.0.150')
     base_url = f'http://{load_balancer_ip}:{port}/wd/hub/session'
     
@@ -119,7 +119,7 @@ def proxy_view(request, port, subpath=''):
         return JsonResponse({'error': str(e)}, status=500)
 
 @csrf_exempt
-def proxy_delete(request, namespace, port):
+await def proxy_delete(request, namespace, port):
     load_balancer_ip = cache.get('load_balancer_ip', '10.255.0.150')
     base_url = f'http://{load_balancer_ip}:32010/api/delete/{namespace}/{port}/'
 
