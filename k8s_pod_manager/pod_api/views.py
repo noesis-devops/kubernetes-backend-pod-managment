@@ -8,7 +8,7 @@ from kubernetes import client, config
 from kubernetes.stream import stream
 from jinja2 import Template
 from pathlib import Path
-import yaml, time, re, os, subprocess, tarfile, base64, requests, logging, asyncio
+import yaml, time, re, os, subprocess, tarfile, base64, requests, logging, aiohttp
 from django.http import HttpResponse, JsonResponse
 from asgiref.sync import sync_to_async
 from django.views.decorators.csrf import csrf_exempt
@@ -92,30 +92,31 @@ async def proxy_view(request, port, subpath=''):
     selenium_grid_url = f'{base_url}/{subpath}' if subpath else base_url
 
     try:
-        response = await sync_to_async(requests.request)(
-            method=request.method,
-            url=selenium_grid_url,
-            headers={key: value for key, value in request.headers.items() if key != 'Host'},
-            data=request.body,
-            params=request.GET
-        )
+        async with aiohttp.ClientSession() as session:
+            async with session.request(
+                method=request.method,
+                url=selenium_grid_url,
+                headers={key: value for key, value in request.headers.items() if key != 'Host'},
+                data=request.body,
+                params=request.GET
+            ) as response:
+                logger.info(f"Proxying request to {selenium_grid_url} with status code {response.status}")
+                logger.debug(f"Request body: {request.body}")
+                response_text = await response.text()
+                logger.debug(f"Response body: {response_text}")
 
-        logger.info(f"Proxying request to {selenium_grid_url} with status code {response.status_code}")
-        logger.debug(f"Request body: {request.body}")
-        logger.debug(f"Response body: {response.text}")
+                if response.status != 200:
+                    logger.error(f"Error in response: {response.status} - {response_text}")
+                    return JsonResponse({'error': response_text}, status=response.status)
 
-        if response.status_code != 200:
-            logger.error(f"Error in response: {response.status_code} - {response.text}")
-            return JsonResponse({'error': response.text}, status=response.status_code)
-    
-        return HttpResponse(
-            content=response.content,
-            status=response.status_code,
-            content_type=response.headers.get('Content-Type', 'application/json')
-        )
-    
-    except requests.RequestException as e:
-        logger.exception(f"RequestException while proxying request to {selenium_grid_url}: {str(e)}")
+                return HttpResponse(
+                    content=await response.read(),
+                    status=response.status,
+                    content_type=response.headers.get('Content-Type', 'application/json')
+                )
+
+    except aiohttp.ClientError as e:
+        logger.exception(f"ClientError while proxying request to {selenium_grid_url}: {str(e)}")
         return JsonResponse({'error': str(e)}, status=500)
 
 @csrf_exempt
@@ -126,26 +127,28 @@ async def proxy_delete(request, namespace, port):
     try:
         logger.info(f"Proxying DELETE request to {base_url}")
 
-        response = await sync_to_async(requests.delete)(
-            url=base_url,
-            headers={key: value for key, value in request.headers.items() if key != 'Host'},
-            params=request.GET
-        )
+        async with aiohttp.ClientSession() as session:
+            async with session.delete(
+                url=base_url,
+                headers={key: value for key, value in request.headers.items() if key != 'Host'},
+                params=request.GET
+            ) as response:
 
-        logger.info(f"DELETE response status: {response.status_code} from {base_url}")
-        logger.debug(f"Response content: {response.text}")
+                logger.info(f"DELETE response status: {response.status} from {base_url}")
+                response_text = await response.text()
+                logger.debug(f"Response content: {response_text}")
 
-        if response.status_code != 200:
-            logger.error(f"Error in DELETE response: {response.status_code} - {response.text}")
-            return JsonResponse({'error': response.text}, status=response.status_code)
+                if response.status != 200:
+                    logger.error(f"Error in DELETE response: {response.status} - {response_text}")
+                    return JsonResponse({'error': response_text}, status=response.status)
 
-        return HttpResponse(
-            content=response.content,
-            status=response.status_code,
-            content_type=response.headers.get('Content-Type', 'application/json')
-        )
+                return HttpResponse(
+                    content=response_text,
+                    status=response.status,
+                    content_type=response.headers.get('Content-Type', 'application/json')
+                )
 
-    except requests.RequestException as e:
+    except aiohttp.ClientError as e:
         logger.exception(f"RequestException while proxying DELETE to {base_url}: {str(e)}")
         return JsonResponse({'error': str(e)}, status=500)
 
