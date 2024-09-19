@@ -91,6 +91,8 @@ def proxy_view(request, port, subpath=''):
     selenium_grid_url = f'{base_url}/{subpath}' if subpath else base_url
 
     try:
+        
+        logger.info(f"Attempting request to {selenium_grid_url} with method {request.method}")
         response = requests.request(
             method=request.method,
             url=selenium_grid_url,
