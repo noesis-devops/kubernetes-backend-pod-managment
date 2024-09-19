@@ -10,7 +10,6 @@ from jinja2 import Template
 from pathlib import Path
 import yaml, time, re, os, subprocess, tarfile, base64, requests, logging
 from django.http import HttpResponse, JsonResponse
-from asgiref.sync import sync_to_async
 from django.views.decorators.csrf import csrf_exempt
 from tempfile import TemporaryFile
 from kubernetes.client.rest import ApiException
