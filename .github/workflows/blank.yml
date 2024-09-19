@@ -66,15 +66,15 @@ jobs:
       #    push: true
       #    tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/${{ env.IMAGE_VIDEO_NAME }}:1.0.1
       #    labels: ${{ steps.meta.outputs.labels }}
-      -
-        name: Build and push API image
+      - name: Build and push API image
         uses: docker/build-push-action@v4
         with:
           context: .
           file: ./k8s_pod_manager/Dockerfile
           push: true
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:1.8.3
-          labels: ${{ steps.meta.outputs.labels }}
+        env:
+          KUBECONFIG: ${{ secrets.KUBECONFIG }}
   #deployment:
   #  runs-on: ubuntu-latest
   #  environment: DEV
