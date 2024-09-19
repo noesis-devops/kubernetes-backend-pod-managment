@@ -14,9 +14,27 @@ from django.views.decorators.csrf import csrf_exempt
 from tempfile import TemporaryFile
 from kubernetes.client.rest import ApiException
 from os import path
+from django.core.cache import cache
 
 
-config.load_incluster_config()
+def load_kubernetes_config():
+    try:
+        config.load_incluster_config()
+        print("Running inside the cluster, using in-cluster configuration")
+    except:
+        config.load_kube_config()
+        print("Running outside the cluster, using kubeconfig")
+
+def update_load_balancer_ip(request):
+    if request.method == "POST":
+        data = request.POST
+        new_ip = data.get('ip')
+        if new_ip:
+            cache.set('load_balancer_ip', new_ip)
+            return JsonResponse({'message': 'IP updated successfully', 'new_ip': new_ip})
+        else:
+            return JsonResponse({'error': 'No IP provided'}, status=400)
+        
 
 def wait_for_deployment_ready(apps_api, namespace, deployment_name, timeout_seconds=60):
     start_time = time.time()
@@ -66,8 +84,8 @@ def get_pods_by_app_label(match_label, namespace):
 
 @csrf_exempt
 def proxy_view(request, port, subpath=''):
-    
-    base_url = f'http://10.255.0.150:{port}/wd/hub/session'
+    load_balancer_ip = cache.get('load_balancer_ip', '10.255.0.150')
+    base_url = f'http://{load_balancer_ip}:{port}/wd/hub/session'
     
     selenium_grid_url = f'{base_url}/{subpath}' if subpath else base_url
 
@@ -224,7 +242,7 @@ class PodCreateView(APIView):
         return namespace, start_port, end_port, record_video, create_timeout, custom_variables
     def post(self, request):
         # Load Kubernetes configuration
-        config.load_incluster_config()
+        load_kubernetes_config()
         namespace, start_port, end_port, record_video, create_timeout, custom_variables = self.set_custom_variables(request)
         core_api = client.CoreV1Api()
         apps_api = client.AppsV1Api()
@@ -370,7 +388,7 @@ class PodCreateView(APIView):
 
 class PodDeleteView(APIView):
     def delete(self, request):
-        config.load_incluster_config()
+        load_kubernetes_config()
 
         # Create Kubernetes API client
         core_api = client.CoreV1Api()
@@ -453,7 +471,7 @@ class PodDeleteViewURL(APIView):
             print('Error copying file: {0} \n'.format(e))
 
     def delete(self, request, namespace, port):
-        config.load_incluster_config()
+        load_kubernetes_config()
 
         # Create Kubernetes API client
         core_api = client.CoreV1Api()
