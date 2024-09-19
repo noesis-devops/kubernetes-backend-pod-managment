@@ -100,8 +100,10 @@ async def proxy_view(request, port, subpath=''):
                 data=request.body,
                 params=request.GET
             ) as response:
+
                 logger.info(f"Proxying request to {selenium_grid_url} with status code {response.status}")
                 logger.debug(f"Request body: {request.body}")
+                
                 response_text = await response.text()
                 logger.debug(f"Response body: {response_text}")
 
@@ -110,9 +112,9 @@ async def proxy_view(request, port, subpath=''):
                     return JsonResponse({'error': response_text}, status=response.status)
 
                 return HttpResponse(
-                    content=await response.read(),
+                    content=response_text,
                     status=response.status,
-                    content_type=response.headers.get('Content-Type', 'application/json')
+                    content_type=response.headers.get('Content-Type')
                 )
 
     except aiohttp.ClientError as e:
