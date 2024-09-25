@@ -85,7 +85,7 @@ def get_pods_by_app_label(match_label, namespace):
 
 @csrf_exempt
 def proxy_view(request, port, subpath=''):
-    load_balancer_ip = cache.get('load_balancer_ip', '10.255.0.150')
+    load_balancer_ip = cache.get('load_balancer_ip', 'testingon-api.automation.clg.nos.pt')
     base_url = f'http://{load_balancer_ip}:{port}/wd/hub/session'
     
     if subpath.startswith('/'):
@@ -128,10 +128,10 @@ def proxy_view(request, port, subpath=''):
 
 @csrf_exempt
 def proxy_delete(request, namespace, port):
-    load_balancer_ip = cache.get('load_balancer_ip', '10.255.0.150')
+    load_balancer_ip = cache.get('load_balancer_ip', 'testingon-api.automation.clg.nos.pt')
     
     # Construct the base URL dynamically
-    base_url = f'http://{load_balancer_ip}:32010/api/delete/{namespace}/{port}/'
+    base_url = f'http://{load_balancer_ip}:80/api/delete/{namespace}/{port}/'
     
     try:
         excluded_headers = ['host', 'content-length', 'transfer-encoding', 'connection']
@@ -285,15 +285,15 @@ class PodCreateView(APIView):
         if create_timeout is None:
             create_timeout = 60
             
-        default_selenium_hub_image = 'selenium/hub:4.1.2'
-        default_selenium_node_image = 'selenium/node-chrome:4.1.2'
-        default_se_node_session_timeout = 300  # Default timeout in seconds
-        default_selenium_node_video_image = 'ghcr.io/noesis-devops/kubernetes-backend-pod-managment/selenium/video:1.0.1'
-
-        #default_selenium_hub_image = 'europe-west1-docker.pkg.dev/automation-prd-p-846221/nosartifactory/docker-hub-virtual/selenium/hub:4.11.0'
-        #default_selenium_node_image = 'europe-west1-docker.pkg.dev/automation-prd-p-846221/nosartifactory/docker-hub-virtual/selenium/node-chrome:4.11.0'
+        #default_selenium_hub_image = 'selenium/hub:4.1.2'
+        #default_selenium_node_image = 'selenium/node-chrome:4.1.2'
         #default_se_node_session_timeout = 300  # Default timeout in seconds
-        #default_selenium_node_video_image = 'europe-west1-docker.pkg.dev/automation-prd-p-846221/nosartifactory/docker-ntx-api-k8s-local/noesis-devops/kubernetes-backend-pod-managment/selenium-video:1.0.1'
+        #default_selenium_node_video_image = 'ghcr.io/noesis-devops/kubernetes-backend-pod-managment/selenium/video:1.0.1'
+
+        default_selenium_hub_image = 'europe-west1-docker.pkg.dev/automation-prd-p-846221/nosartifactory/docker-hub-virtual/selenium/hub:4.11.0'
+        default_selenium_node_image = 'europe-west1-docker.pkg.dev/automation-prd-p-846221/nosartifactory/docker-hub-virtual/selenium/node-chrome:4.11.0'
+        default_se_node_session_timeout = 300  # Default timeout in seconds
+        default_selenium_node_video_image = 'europe-west1-docker.pkg.dev/automation-prd-p-846221/nosartifactory/docker-ntx-api-k8s-local/noesis-devops/kubernetes-backend-pod-managment/selenium-video:1.0.1'
         default_http_proxy = ''
         default_https_proxy = ''
         default_no_proxy = ''
