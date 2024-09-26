@@ -7,6 +7,6 @@ spec:
     app: node-{{ port }}
   ports:
     - protocol: TCP
-      port: 5555  # Assuming Chrome's debug port
+      port: {{ port }}
       targetPort: 5555
-  type: NodePort
+  type: ClusterIP
