@@ -85,8 +85,10 @@ def get_pods_by_app_label(match_label, namespace):
 
 @csrf_exempt
 def proxy_view(request, port, subpath=''):
-    load_balancer_ip = cache.get('load_balancer_ip', 'testingon-api.automation.clg.nos.pt')
-    base_url = f'http://{load_balancer_ip}:{port}/wd/hub/session'
+    namespace = 'testingon'
+    service_name = f'selenium-hub-{port}-service'
+    
+    base_url = f'http://{service_name}.{namespace}.svc.cluster.local:{port}/wd/hub/session'
     
     if subpath.startswith('/'):
         subpath = subpath[1:]
