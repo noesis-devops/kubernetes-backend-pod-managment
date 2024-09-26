@@ -7,8 +7,7 @@ spec:
     app: selenium-hub-{{ port }}
   ports:
     - protocol: TCP
-      port: 4000
+      port: {{ port }}
       targetPort: 4444
-      nodePort: {{ port }}
       name: hub
-  type: NodePort
+  type: ClusterIP
