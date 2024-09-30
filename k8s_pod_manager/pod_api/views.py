@@ -89,6 +89,7 @@ def proxy_view(request, port, subpath=''):
     service_name = f'selenium-hub-{port}-service'
     
     base_url = f'http://{service_name}.{namespace}.svc.cluster.local:{port}/wd/hub/session'
+    logger.info(f"Base URL: {base_url}")
     
     if subpath.startswith('/'):
         subpath = subpath[1:]
