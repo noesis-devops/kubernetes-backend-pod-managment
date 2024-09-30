@@ -132,8 +132,7 @@ def proxy_view(request, port, subpath=''):
 def proxy_delete(request, namespace, port):
     load_balancer_ip = cache.get('load_balancer_ip', 'testingon-api.automation.clg.nos.pt')
     
-    # Construct the base URL dynamically
-    base_url = f'http://{load_balancer_ip}:80/api/delete/{namespace}/{port}/'
+    base_url = f'http://{service_name}.{namespace}.svc.cluster.local:{port}/api/delete/{namespace}/{port}/'
     
     try:
         excluded_headers = ['host', 'content-length', 'transfer-encoding', 'connection']
