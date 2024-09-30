@@ -67,6 +67,17 @@ def delete_objects(apps_api, core_api, resp, namespace):
         print(f"'{config_map}' deleted successfully.")
     return Response({'deleted': resp})
 
+def handle_api_exception(e, resource_name):
+    if e.status == 422 and "port is already allocated" in e.body:
+        print({'message': e.body})
+        return False
+    elif e.status == 409 and e.reason == "AlreadyExists":
+        print(f"{resource_name} already exists.")
+        return True
+    else:
+        print(f"An error occurred creating {resource_name}:", e)
+        return False
+
 def get_pods_by_app_label(match_label, namespace):
     try:
         api_instance = client.CoreV1Api()
@@ -298,15 +309,15 @@ class PodCreateView(APIView):
         if create_timeout is None:
             create_timeout = 60
             
-       # default_selenium_hub_image = 'selenium/hub:4.1.2'
-       # default_selenium_node_image = 'selenium/node-chrome:4.1.2'
-       # default_se_node_session_timeout = 300  # Default timeout in seconds
-       # default_selenium_node_video_image = 'ghcr.io/noesis-devops/kubernetes-backend-pod-managment/selenium/video:1.0.1'
-
-        default_selenium_hub_image = 'europe-west1-docker.pkg.dev/automation-prd-p-846221/nosartifactory/docker-hub-virtual/selenium/hub:4.1.2'
-        default_selenium_node_image = 'europe-west1-docker.pkg.dev/automation-prd-p-846221/nosartifactory/docker-hub-virtual/selenium/node-chrome:4.1.2'
+        default_selenium_hub_image = 'selenium/hub:4.1.2'
+        default_selenium_node_image = 'selenium/node-chrome:4.1.2'
         default_se_node_session_timeout = 300  # Default timeout in seconds
-        default_selenium_node_video_image = 'europe-west1-docker.pkg.dev/automation-prd-p-846221/nosartifactory/docker-ntx-api-k8s-local/noesis-devops/kubernetes-backend-pod-managment/selenium-video:1.0.1'
+        default_selenium_node_video_image = 'ghcr.io/noesis-devops/kubernetes-backend-pod-managment/selenium/video:1.0.1'
+
+       # default_selenium_hub_image = 'europe-west1-docker.pkg.dev/automation-prd-p-846221/nosartifactory/docker-hub-virtual/selenium/hub:4.1.2'
+      #  default_selenium_node_image = 'europe-west1-docker.pkg.dev/automation-prd-p-846221/nosartifactory/docker-hub-virtual/selenium/node-chrome:4.1.2'
+      #  default_se_node_session_timeout = 300  # Default timeout in seconds
+      #  default_selenium_node_video_image = 'europe-west1-docker.pkg.dev/automation-prd-p-846221/nosartifactory/docker-ntx-api-k8s-local/noesis-devops/kubernetes-backend-pod-managment/selenium-video:1.0.1'
         default_http_proxy = ''
         default_https_proxy = ''
         default_no_proxy = ''
@@ -351,11 +362,7 @@ class PodCreateView(APIView):
                 succeeds = True
                 break  # If service creation succeeds, exit the loop
             except client.exceptions.ApiException as e:
-                succeeds = False
-                if e.status == 422 and "port is already allocated" in e.body:
-                    print({'message': e.body})
-                else:
-                    print(f"An error occurred creating service {api_response.metadata.name}:", e)
+                succeeds = handle_api_exception(e, f"Service {api_response.metadata.name}")
                                
         if record_video:
             template_path = Path(__file__).with_name('video-cm.yaml')
@@ -366,8 +373,7 @@ class PodCreateView(APIView):
                 print(f"Config Map video-cm-{custom_variables['port']} created successfully.")
                 succeeds = True
             except client.exceptions.ApiException as e:
-                succeeds = False
-                print(f"An error occurred creating config map {api_response.metadata.name}:", e)
+                succeeds = handle_api_exception(e, f"Service {api_response.metadata.name}")
 
         template_path = Path(__file__).with_name('node_service_template.yaml')
         rendered_node_service_template = self.substitute_tokens_in_yaml(template_path, custom_variables)
@@ -377,11 +383,7 @@ class PodCreateView(APIView):
             print(f"Service {api_response.metadata.name} created successfully.")
             succeeds = True
         except client.exceptions.ApiException as e:
-                succeeds = False
-                if e.status == 422 and "port is already allocated" in e.body:
-                    print({'message': e.body})
-                else:
-                    print(f"An error occurred creating service {api_response.metadata.name}:", e)
+            succeeds = handle_api_exception(e, f"Service {api_response.metadata.name}")
         template_path = Path(__file__).with_name('selenium_hub_service_pub_sub_template.yaml')
         rendered_selenium_hub_service_pub_sub_template = self.substitute_tokens_in_yaml(template_path, custom_variables)
         try:
@@ -390,11 +392,7 @@ class PodCreateView(APIView):
             print(f"Service {api_response.metadata.name} created successfully.")
             succeeds = True
         except client.exceptions.ApiException as e:
-                succeeds = False
-                if e.status == 422 and "port is already allocated" in e.body:
-                    print({'message': e.body})
-                else:
-                    print(f"An error occurred creating service {api_response.metadata.name}:", e)
+            succeeds = handle_api_exception(e, f"Service {api_response.metadata.name}")
         
         try:
             template_path = Path(__file__).with_name('selenium_hub_deployment_template.yaml')
@@ -409,11 +407,7 @@ class PodCreateView(APIView):
             else:
                 succeeds = True
         except client.exceptions.ApiException as e:
-            succeeds = False
-            if e.status == 409 and e.reason == "AlreadyExists":
-                print(f"message: {e.message}")
-            else:
-                print(f"An error occurred creating deployment {api_response.metadata.name}:", e)
+            succeeds = handle_api_exception(e, f"Service {api_response.metadata.name}")
         
         
         try:
@@ -432,11 +426,7 @@ class PodCreateView(APIView):
             else:
                 succeeds = True
         except client.exceptions.ApiException as e:
-            succeeds = False
-            if e.status == 409 and e.reason == "AlreadyExists":
-                print(f"Deployment {api_response.metadata.name} already exists.")
-            else:
-                print(f"An error occurred creating deployment {api_response.metadata.name}:", e)
+            succeeds = handle_api_exception(e, f"Service {api_response.metadata.name}")
         
         if succeeds == False:
             delete_objects(apps_api, core_api, resp, namespace)
