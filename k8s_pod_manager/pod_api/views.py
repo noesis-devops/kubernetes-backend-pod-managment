@@ -130,20 +130,20 @@ def proxy_view(request, port, subpath=''):
 
 @csrf_exempt
 def proxy_delete(request, namespace, port):
-        v1 = client.CoreV1Api()
-        service_name = f'ntx-api-kubernetes-ntx-pod-management-service' 
-        namespace = 'testingon'
-        service = v1.read_namespaced_service(name=service_name, namespace=namespace)
-        logger.info(f"Fetched service '{service_name}' in namespace '{namespace}'.")
+    v1 = client.CoreV1Api()
+    service_name = f'ntx-api-kubernetes-ntx-pod-management-service' 
+    namespace = 'testingon'
+    service = v1.read_namespaced_service(name=service_name, namespace=namespace)
+    logger.info(f"Fetched service '{service_name}' in namespace '{namespace}'.")
 
-        if not service.spec.ports:
-            logger.error(f"No ports found for service '{service_name}'.")
-            return JsonResponse({'error': 'Service has no ports configured.'}, status=500)
-        
-        service_port = service.spec.ports[0].port
-        logger.info(f"Retrieved port {service_port} for service '{service_name}'.")
+    if not service.spec.ports:
+        logger.error(f"No ports found for service '{service_name}'.")
+        return JsonResponse({'error': 'Service has no ports configured.'}, status=500)
+    
+    service_port = service.spec.ports[0].port
+    logger.info(f"Retrieved port {service_port} for service '{service_name}'.")
 
-        base_url = f'http://{service_name}.{namespace}.svc.cluster.local:{service_port}/api/delete/{namespace}/{port}/'
+    base_url = f'http://{service_name}.{namespace}.svc.cluster.local:{service_port}/api/delete/{namespace}/{port}/'
     
     try:
         excluded_headers = ['host', 'content-length', 'transfer-encoding', 'connection']
