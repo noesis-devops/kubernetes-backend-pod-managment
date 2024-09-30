@@ -4,6 +4,7 @@ from django.shortcuts import render
 
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from rest_framework import status  # Added import for status codes
 from kubernetes import client, config
 from kubernetes.stream import stream
 from jinja2 import Template
@@ -21,10 +22,10 @@ logger = logging.getLogger(__name__)
 def load_kubernetes_config():
     try:
         config.load_incluster_config()
-        print("Running inside the cluster, using in-cluster configuration")
-    except:
+        logger.info("Running inside the cluster, using in-cluster configuration")
+    except Exception as e:
         config.load_kube_config()
-        print("Running outside the cluster, using kubeconfig")
+        logger.info("Running outside the cluster, using kubeconfig")
 
 def update_load_balancer_ip(request):
     if request.method == "POST":
@@ -35,47 +36,56 @@ def update_load_balancer_ip(request):
             return JsonResponse({'message': 'IP updated successfully', 'new_ip': new_ip})
         else:
             return JsonResponse({'error': 'No IP provided'}, status=400)
-        
 
 def wait_for_deployment_ready(apps_api, namespace, deployment_name, timeout_seconds=60):
     start_time = time.time()
 
     while True:
-        deployment = apps_api.read_namespaced_deployment(deployment_name, namespace)
-        if deployment.status.ready_replicas == deployment.spec.replicas:
-            print(f"Deployment {deployment_name} is ready.")
-            return True
-
-        if time.time() - start_time > timeout_seconds:
-            print(f"Timeout reached while waiting for deployment {deployment_name} to be ready.")
+        try:
+            deployment = apps_api.read_namespaced_deployment(deployment_name, namespace)
+            if deployment.status.ready_replicas == deployment.spec.replicas:
+                logger.info(f"Deployment {deployment_name} is ready.")
+                return True
+        except ApiException as e:
+            logger.error(f"Error checking deployment status for {deployment_name}: {str(e)}")
             return False
 
-        time.sleep(3)  # Wait for 5 seconds before checking again
+        if time.time() - start_time > timeout_seconds:
+            logger.error(f"Timeout reached while waiting for deployment {deployment_name} to be ready.")
+            return False
 
-    return False  # In case of unexpected exit from the loop
+        time.sleep(3)  # Wait for 3 seconds before checking again
 
-# delete everything if something fails    
 def delete_objects(apps_api, core_api, resp, namespace):
-    for deployment in resp[namespace]["deployments"]:
-        apps_api.delete_namespaced_deployment(deployment, namespace)
-        print(f"'{deployment}' deleted successfully.")
-    for service in resp[namespace]["services"]:
-        core_api.delete_namespaced_service(service, namespace)
-        print(f"'{service}' deleted successfully.")
-    for config_map in resp[namespace]["config_maps"]:
-        core_api.delete_namespaced_config_map(config_map, namespace)
-        print(f"'{config_map}' deleted successfully.")
+    for deployment in resp[namespace].get("deployments", []):
+        try:
+            apps_api.delete_namespaced_deployment(deployment, namespace)
+            logger.info(f"Deployment '{deployment}' deleted successfully.")
+        except ApiException as e:
+            logger.error(f"Failed to delete deployment '{deployment}': {str(e)}")
+    for service in resp[namespace].get("services", []):
+        try:
+            core_api.delete_namespaced_service(service, namespace)
+            logger.info(f"Service '{service}' deleted successfully.")
+        except ApiException as e:
+            logger.error(f"Failed to delete service '{service}': {str(e)}")
+    for config_map in resp[namespace].get("config_maps", []):
+        try:
+            core_api.delete_namespaced_config_map(config_map, namespace)
+            logger.info(f"ConfigMap '{config_map}' deleted successfully.")
+        except ApiException as e:
+            logger.error(f"Failed to delete ConfigMap '{config_map}': {str(e)}")
     return Response({'deleted': resp})
 
 def handle_api_exception(e, resource_name):
     if e.status == 422 and "port is already allocated" in e.body:
-        print({'message': e.body})
+        logger.error({'message': e.body})
         return False
     elif e.status == 409 and e.reason == "AlreadyExists":
-        print(f"{resource_name} already exists.")
+        logger.warning(f"{resource_name} already exists.")
         return False
     else:
-        print(f"An error occurred creating {resource_name}:", e)
+        logger.error(f"An error occurred creating {resource_name}: {str(e)}")
         return False
 
 def get_pods_by_app_label(match_label, namespace):
@@ -87,11 +97,12 @@ def get_pods_by_app_label(match_label, namespace):
         filtered_pods = [pod for pod in pod_list.items if pod.metadata.labels.get("app") == match_label]
         if filtered_pods:
             for pod in filtered_pods:
-                print(f"Pod Name: {pod.metadata.name}")
+                logger.info(f"Pod Name: {pod.metadata.name}")
         else:
-            print(f"No pods found for deployment: {match_label}")
+            logger.info(f"No pods found for deployment: {match_label}")
     except Exception as e:
-        print(f"Error: {e}")
+        logger.error(f"Error fetching pods by label '{match_label}' in namespace '{namespace}': {str(e)}")
+        filtered_pods = []
     return filtered_pods
 
 @csrf_exempt
@@ -116,7 +127,10 @@ def proxy_view(request, port, subpath=''):
         logger.debug(f"Request headers: {headers}")
         logger.debug(f"Request params: {request.GET}")
         if data:
-            logger.debug(f"Request body: {data.decode('utf-8')}")
+            try:
+                logger.debug(f"Request body: {data.decode('utf-8')}")
+            except UnicodeDecodeError:
+                logger.debug("Request body contains non-UTF-8 bytes.")
 
         response = requests.request(
             method=request.method,
@@ -145,8 +159,12 @@ def proxy_delete(request, namespace, port):
     v1 = client.CoreV1Api()
     service_name = f'ntx-api-kubernetes-ntx-pod-management-service' 
     namespace = 'testingon'
-    service = v1.read_namespaced_service(name=service_name, namespace=namespace)
-    logger.info(f"Fetched service '{service_name}' in namespace '{namespace}'.")
+    try:
+        service = v1.read_namespaced_service(name=service_name, namespace=namespace)
+        logger.info(f"Fetched service '{service_name}' in namespace '{namespace}'.")
+    except ApiException as e:
+        logger.error(f"Error fetching service {service_name}: {str(e)}")
+        return JsonResponse({'error': f'Error fetching service {service_name}: {str(e)}'}, status=500)
 
     if not service.spec.ports:
         logger.error(f"No ports found for service '{service_name}'.")
@@ -171,7 +189,6 @@ def proxy_delete(request, namespace, port):
                 logger.debug(f"Request body: {data.decode('utf-8')}")
             except UnicodeDecodeError:
                 logger.debug("Request body contains non-UTF-8 bytes.")
-
 
         response = requests.delete(
             url=base_url,
@@ -203,7 +220,6 @@ def proxy_delete(request, namespace, port):
         logger.exception(f"RequestException while proxying DELETE to {base_url}: {str(e)}")
         return JsonResponse({'error': str(e)}, status=500)
 
-
 def exec_cmd(api_instance, name, container_name, namespace, command):
     exec_command = ["/bin/sh", "-c", command]
     resp = stream(api_instance.connect_get_namespaced_pod_exec,
@@ -220,7 +236,7 @@ def check_logs_message(pod_name, container_name, namespace, message):
     # Create a Kubernetes API client
     core_api = client.CoreV1Api()
     # Stream container logs
-    stream = core_api.read_namespaced_pod_log(
+    stream_log = core_api.read_namespaced_pod_log(
         name=pod_name,
         namespace=namespace,
         container=container_name,
@@ -229,14 +245,14 @@ def check_logs_message(pod_name, container_name, namespace, message):
     )
     found = False
     while True:
-        line = stream.readline()
+        line = stream_log.readline()
         if line:
             print(line)
             if message in line:
                 found = True
                 break  # Stop the loop when the desired message is found
 
-    stream.close()
+    stream_log.close()
     
     return found
 
@@ -248,24 +264,29 @@ class PodManagement:
             pod_list = [pod.metadata.name for pod in api_response.items]
             return pod_list
         except client.rest.ApiException as e:
+            logger.error(f"Error fetching pods in namespace {namespace}: {str(e)}")
             return None  # Return an appropriate error response or raise an exception
 
 class PodListView(APIView):
     def get(self, request):
-        core_api = client.CoreV1Api()
-        namespaces = core_api.list_namespace().items
+        try:
+            core_api = client.CoreV1Api()
+            namespaces = core_api.list_namespace().items
 
-        pod_data = []
+            pod_data = []
 
-        # Iterate through namespaces and pods
-        for namespace in namespaces:
-            namespace_name = namespace.metadata.name
-            pods = core_api.list_namespaced_pod(namespace_name).items
+            # Iterate through namespaces and pods
+            for namespace in namespaces:
+                namespace_name = namespace.metadata.name
+                pods = core_api.list_namespaced_pod(namespace_name).items
 
-            pod_list = [pod.metadata.name for pod in pods]
-            pod_data.append({namespace_name: pod_list})
+                pod_list = [pod.metadata.name for pod in pods]
+                pod_data.append({namespace_name: pod_list})
 
-        return Response({"pod_data": pod_data})
+            return Response({"pod_data": pod_data})
+        except client.rest.ApiException as e:
+            logger.error(f"Error fetching pod data: {str(e)}")
+            return Response({'error': 'Error fetching pod data'}, status=500)
 
 class PodsInNamespaceView(APIView):
     def get(self, request, namespace):
@@ -285,6 +306,7 @@ class PodCreateView(APIView):
         template = Template(template_content)
         rendered_yaml = template.render(**variables)
         return rendered_yaml
+
     def set_custom_variables(self, request):
         # Parse request data
         namespace = request.data.get('namespace')
@@ -303,7 +325,7 @@ class PodCreateView(APIView):
         if start_port >= end_port:
             return Response({'message': 'Invalid port-range values: start_port must be less than end_port'}, status=400)
         record_video = request.data.get('record_video')
-        if namespace is None:
+        if record_video is None:
             record_video = False
         create_timeout = request.data.get('create_timeout')
         if create_timeout is None:
@@ -314,10 +336,10 @@ class PodCreateView(APIView):
         default_se_node_session_timeout = 300  # Default timeout in seconds
         default_selenium_node_video_image = 'ghcr.io/noesis-devops/kubernetes-backend-pod-managment/selenium/video:1.0.1'
 
-       # default_selenium_hub_image = 'europe-west1-docker.pkg.dev/automation-prd-p-846221/nosartifactory/docker-hub-virtual/selenium/hub:4.1.2'
-      #  default_selenium_node_image = 'europe-west1-docker.pkg.dev/automation-prd-p-846221/nosartifactory/docker-hub-virtual/selenium/node-chrome:4.1.2'
-      #  default_se_node_session_timeout = 300  # Default timeout in seconds
-      #  default_selenium_node_video_image = 'europe-west1-docker.pkg.dev/automation-prd-p-846221/nosartifactory/docker-ntx-api-k8s-local/noesis-devops/kubernetes-backend-pod-managment/selenium-video:1.0.1'
+        # default_selenium_hub_image = 'europe-west1-docker.pkg.dev/automation-prd-p-846221/nosartifactory/docker-hub-virtual/selenium/hub:4.1.2'
+        # default_selenium_node_image = 'europe-west1-docker.pkg.dev/automation-prd-p-846221/nosartifactory/docker-hub-virtual/selenium/node-chrome:4.1.2'
+        # default_se_node_session_timeout = 300  # Default timeout in seconds
+        # default_selenium_node_video_image = 'europe-west1-docker.pkg.dev/automation-prd-p-846221/nosartifactory/docker-ntx-api-k8s-local/noesis-devops/kubernetes-backend-pod-managment/selenium-video:1.0.1'
         default_http_proxy = ''
         default_https_proxy = ''
         default_no_proxy = ''
@@ -327,9 +349,9 @@ class PodCreateView(APIView):
             'selenium_hub_image': default_selenium_hub_image,
             'selenium_node_image': default_selenium_node_image,
             'selenium_node_video_image': default_selenium_node_video_image,
-            #'selenium_hub_image': request.data.get('selenium-hub-image', default_selenium_hub_image),
-            #'selenium_node_image': request.data.get('selenium-node-image', default_selenium_node_image),
-            #'selenium_node_video_image': request.data.get('selenium-node-video-image', default_selenium_node_video_image),
+            # 'selenium_hub_image': request.data.get('selenium-hub-image', default_selenium_hub_image),
+            # 'selenium_node_image': request.data.get('selenium-node-image', default_selenium_node_image),
+            # 'selenium_node_video_image': request.data.get('selenium-node-video-image', default_selenium_node_video_image),
             'se_node_session_timeout': request.data.get('se_node_session_timeout', default_se_node_session_timeout),
             'http_proxy': request.data.get('http_proxy', default_http_proxy),
             'https_proxy': request.data.get('https_proxy', default_https_proxy),
@@ -337,69 +359,104 @@ class PodCreateView(APIView):
         }
         
         return namespace, start_port, end_port, record_video, create_timeout, custom_variables
+
     def post(self, request):
         # Load Kubernetes configuration
         load_kubernetes_config()
-        namespace, start_port, end_port, record_video, create_timeout, custom_variables = self.set_custom_variables(request)
+        try:
+            namespace, start_port, end_port, record_video, create_timeout, custom_variables = self.set_custom_variables(request)
+        except Response as e:
+            return e
+
         core_api = client.CoreV1Api()
         apps_api = client.AppsV1Api()
         
         resp = {namespace: {"deployments": [], "services": [], "config_maps": []}}
         
         succeeds = False
-        
         api_response = None
-        
-        
+
         for port in range(start_port, end_port):
             custom_variables["port"] = port
             template_path = Path(__file__).with_name('selenium_hub_service_template.yaml')
             rendered_selenium_hub_service_template = self.substitute_tokens_in_yaml(template_path, custom_variables)
+            
+            service_yaml = yaml.safe_load(rendered_selenium_hub_service_template)
+            service_name = service_yaml['metadata']['name']
+            
             try:
-                api_response = core_api.create_namespaced_service(namespace=namespace, body=yaml.safe_load(rendered_selenium_hub_service_template))
+                api_response = core_api.create_namespaced_service(namespace=namespace, body=service_yaml)
                 resp[namespace]["services"].append(api_response.metadata.name)
-                print(f"Service {api_response.metadata.name} created successfully.")
+                logger.info(f"Service {api_response.metadata.name} created successfully.")
                 succeeds = True
-                break  # If service creation succeeds, exit the loop
+                break
             except client.exceptions.ApiException as e:
-                succeeds = handle_api_exception(e, f"Service {api_response.metadata.name}")
-                               
+                success = handle_api_exception(e, f"Service {service_name}")
+                if not success:
+                    logger.info(f"Skipping port {port} due to exception.")
+                    continue
+                else:
+                    succeeds = True
+                    break
+        else:
+            logger.error("Failed to create selenium hub service on any port.")
+            return Response({'message': 'Failed to create selenium hub service on any port.'}, status=500)
+
         if record_video:
             template_path = Path(__file__).with_name('video-cm.yaml')
             rendered_video_config_map_template = self.substitute_tokens_in_yaml(template_path, custom_variables)
+            config_map_yaml = yaml.safe_load(rendered_video_config_map_template)
+            config_map_name = config_map_yaml['metadata']['name']
             try:
-                api_response = core_api.create_namespaced_config_map(namespace=namespace, body=yaml.safe_load(rendered_video_config_map_template))
-                #resp[namespace]["services"].append(api_response.metadata.name)
-                print(f"Config Map video-cm-{custom_variables['port']} created successfully.")
+                api_response = core_api.create_namespaced_config_map(namespace=namespace, body=config_map_yaml)
+                resp[namespace]["config_maps"].append(api_response.metadata.name)
+                logger.info(f"Config Map {api_response.metadata.name} created successfully.")
                 succeeds = True
             except client.exceptions.ApiException as e:
-                succeeds = handle_api_exception(e, f"Service {api_response.metadata.name}")
+                success = handle_api_exception(e, f"ConfigMap {config_map_name}")
+                if not success:
+                    delete_objects(apps_api, core_api, resp, namespace)
+                    return Response({'message': 'Failed to create ConfigMap.'}, status=500)
 
         template_path = Path(__file__).with_name('node_service_template.yaml')
         rendered_node_service_template = self.substitute_tokens_in_yaml(template_path, custom_variables)
+        service_yaml = yaml.safe_load(rendered_node_service_template)
+        service_name = service_yaml['metadata']['name']
         try:
-            api_response = core_api.create_namespaced_service(namespace=namespace, body=yaml.safe_load(rendered_node_service_template))
+            api_response = core_api.create_namespaced_service(namespace=namespace, body=service_yaml)
             resp[namespace]["services"].append(api_response.metadata.name)
-            print(f"Service {api_response.metadata.name} created successfully.")
+            logger.info(f"Service {api_response.metadata.name} created successfully.")
             succeeds = True
         except client.exceptions.ApiException as e:
-            succeeds = handle_api_exception(e, f"Service {api_response.metadata.name}")
+            success = handle_api_exception(e, f"Service {service_name}")
+            if not success:
+                delete_objects(apps_api, core_api, resp, namespace)
+                return Response({'message': 'Failed to create node service.'}, status=500)
+
+        
         template_path = Path(__file__).with_name('selenium_hub_service_pub_sub_template.yaml')
         rendered_selenium_hub_service_pub_sub_template = self.substitute_tokens_in_yaml(template_path, custom_variables)
+        service_yaml = yaml.safe_load(rendered_selenium_hub_service_pub_sub_template)
+        service_name = service_yaml['metadata']['name']
         try:
-            api_response = core_api.create_namespaced_service(namespace=namespace, body=yaml.safe_load(rendered_selenium_hub_service_pub_sub_template))
+            api_response = core_api.create_namespaced_service(namespace=namespace, body=service_yaml)
             resp[namespace]["services"].append(api_response.metadata.name)
-            print(f"Service {api_response.metadata.name} created successfully.")
+            logger.info(f"Service {api_response.metadata.name} created successfully.")
             succeeds = True
         except client.exceptions.ApiException as e:
-            succeeds = handle_api_exception(e, f"Service {api_response.metadata.name}")
-        
+            success = handle_api_exception(e, f"Service {service_name}")
+            if not success:
+                delete_objects(apps_api, core_api, resp, namespace)
+                return Response({'message': 'Failed to create selenium hub service pub sub.'}, status=500)
+
         try:
             template_path = Path(__file__).with_name('selenium_hub_deployment_template.yaml')
             rendered_selenium_hub_deployment_template = self.substitute_tokens_in_yaml(template_path, custom_variables)
-            api_response = apps_api.create_namespaced_deployment(namespace, yaml.safe_load(rendered_selenium_hub_deployment_template))
+            deployment_yaml = yaml.safe_load(rendered_selenium_hub_deployment_template)
+            deployment_name = deployment_yaml['metadata']['name']
+            api_response = apps_api.create_namespaced_deployment(namespace, deployment_yaml)
             resp[namespace]["deployments"].append(api_response.metadata.name)
-            print(f"Deployment {api_response.metadata.name} created successfully.")
+            logger.info(f"Deployment {api_response.metadata.name} created successfully.")
 
             ready = wait_for_deployment_ready(apps_api, namespace, api_response.metadata.name, timeout_seconds=create_timeout)
             if not ready:
@@ -407,18 +464,22 @@ class PodCreateView(APIView):
             else:
                 succeeds = True
         except client.exceptions.ApiException as e:
-            succeeds = handle_api_exception(e, f"Service {api_response.metadata.name}")
-        
-        
+            success = handle_api_exception(e, f"Deployment {deployment_yaml['metadata']['name']}")
+            if not success:
+                delete_objects(apps_api, core_api, resp, namespace)
+                return Response({'message': 'Failed to create selenium hub deployment.'}, status=500)
+
         try:
             if record_video:
                 template_path = Path(__file__).with_name('node_video_deployment_template.yaml')
             else:
                 template_path = Path(__file__).with_name('node_deployment_template.yaml')
             rendered_node_deployment_template = self.substitute_tokens_in_yaml(template_path, custom_variables)
-            api_response = apps_api.create_namespaced_deployment(namespace, yaml.safe_load(rendered_node_deployment_template))
+            deployment_yaml = yaml.safe_load(rendered_node_deployment_template)
+            deployment_name = deployment_yaml['metadata']['name']
+            api_response = apps_api.create_namespaced_deployment(namespace, deployment_yaml)
             resp[namespace]["deployments"].append(api_response.metadata.name)
-            print(f"Deployment {api_response.metadata.name} created successfully.")
+            logger.info(f"Deployment {api_response.metadata.name} created successfully.")
 
             ready = wait_for_deployment_ready(apps_api, namespace, api_response.metadata.name, timeout_seconds=create_timeout)
             if not ready:
@@ -426,40 +487,15 @@ class PodCreateView(APIView):
             else:
                 succeeds = True
         except client.exceptions.ApiException as e:
-            succeeds = handle_api_exception(e, f"Service {api_response.metadata.name}")
-        
-        if succeeds == False:
+            success = handle_api_exception(e, f"Deployment {deployment_yaml['metadata']['name']}")
+            if not success:
+                delete_objects(apps_api, core_api, resp, namespace)
+                return Response({'message': 'Failed to create node deployment.'}, status=500)
+
+        if not succeeds:
             delete_objects(apps_api, core_api, resp, namespace)
             return Response({'message': f'Deployments or services cannot be created: {resp}'}, status=500)
-        
-        #v1.4.29
-        #for deployment in resp[namespace]["deployments"]:
-        #    ready = wait_for_deployment_ready(apps_api, namespace, deployment, timeout_seconds=create_timeout)
-        #    if ready:
-        #        continue
-        #    else:
-        #        delete_objects(apps_api, core_api, resp, namespace)
-        #        return Response({'message': f'Deployment {deployment} did not become ready within the timeout.'}, status=500)
 
-
-        #found = check_logs_message(f"node-{custom_variables['port']}", f"node-{custom_variables['port']}", namespace, "registered")
-        #if found:
-         #   resp = exec_cmd(core_api, f"export http_proxy={custom_variables['http_proxy']}; export https_proxy={custom_variables['https_proxy']}; export no_proxy={custom_variables['no_proxy']}")
-        #else:
-        #    delete_objects(apps_api, core_api, resp, namespace)
-        #    return Response({'message': f'Node hasnt been registered'}, status=500)
-        #pods = get_pods_by_app_label(f"node-{port}", namespace)
-        #print(pods)
-        #for pod in pods:
-        #    print(pod.metadata.name)
-        #    for container in pod.spec.containers:
-        #        print(container.name)
-        #        if container.name == f"node-{port}":
-        #            print("found")
-        #            exec_resp = exec_cmd(core_api, pod.metadata.name, container.name, namespace, f"echo \"export http_proxy={custom_variables['http_proxy']}\nexport https_proxy={custom_variables['https_proxy']}\nexport no_proxy={custom_variables['no_proxy']}\" >> ~/.bashrc")
-        #            exec_resp = exec_cmd(core_api, pod.metadata.name, container.name, namespace, f". ~/.bashrc")
-        #            print(exec_resp)
-        #            break
         return Response({'objects_created': resp, "port": custom_variables["port"]})
 
 class PodDeleteView(APIView):
@@ -472,14 +508,21 @@ class PodDeleteView(APIView):
         # Delete deployments and services
         try:
             for namespace in request.data:
-                for deployment in request.data[namespace]["deployments"]:
-                    resp = apps_api.delete_namespaced_deployment(deployment, namespace)
-                    print(resp)
-                for service in request.data[namespace]["services"]:
-                    resp = core_api.delete_namespaced_service(service, namespace)
-                    print(resp)
+                for deployment in request.data[namespace].get("deployments", []):
+                    try:
+                        resp = apps_api.delete_namespaced_deployment(deployment, namespace)
+                        logger.info(f"Deployment '{deployment}' deleted successfully.")
+                    except ApiException as e:
+                        logger.error(f"Failed to delete deployment '{deployment}': {str(e)}")
+                for service in request.data[namespace].get("services", []):
+                    try:
+                        resp = core_api.delete_namespaced_service(service, namespace)
+                        logger.info(f"Service '{service}' deleted successfully.")
+                    except ApiException as e:
+                        logger.error(f"Failed to delete service '{service}': {str(e)}")
             return Response({'Deleted': request.data})
         except client.rest.ApiException as e:
+            logger.error(f"Error deleting resources: {str(e)}")
             return Response({'message': f'Error deleting: {str(e)}'}, status=400)
 
 class PodDeleteViewURL(APIView):
@@ -489,31 +532,23 @@ class PodDeleteViewURL(APIView):
             resp.update(timeout=1)
             if resp.peek_stdout():
                 output = resp.read_stdout()
-                print(f"STDOUT: \n{output}")
-                print(output)
-                print(type(output))
+                logger.debug(f"STDOUT: \n{output}")
                 file_list = output.split('\n')
-                print(file_list)
                 for file_name in file_list:
-                    print("file_name_before")
-                    print(file_name)
                     if ".mp4" in file_name:
                         source_path = file_name
-                        print("source_path")
-                        print(source_path)
                         return source_path
             if resp.peek_stderr():
-                print(f"STDERR: \n{resp.read_stderr()}")
+                logger.error(f"STDERR: \n{resp.read_stderr()}")
 
         resp.close()
-        
-        
 
         if resp.returncode != 0:
             raise Exception("Script failed")
+
     def copy_file_from_pod(self, api_instance, pod_name, container_name, src_path, dest_path, namespace="default"):
         try:
-            exec_command = ['/bin/sh', '-c', 'cat {src_path} | base64'.format(src_path=src_path)]
+            exec_command = ['/bin/sh', '-c', f'cat {src_path} | base64']
             api_response = stream(api_instance.connect_get_namespaced_pod_exec, pod_name, namespace,
                                 command=exec_command,
                                 container=container_name,
@@ -528,7 +563,7 @@ class PodDeleteViewURL(APIView):
                 if api_response.peek_stdout():
                     file_bytes += api_response.read_stdout().encode('utf-8')
                 if api_response.peek_stderr():
-                    print('STDERR: {0}'.format(api_response.read_stderr()))
+                    logger.error(f"STDERR: {api_response.read_stderr()}")
 
             api_response.close()
 
@@ -539,12 +574,12 @@ class PodDeleteViewURL(APIView):
             with open(dest_path, 'wb') as dest_file:
                 dest_file.write(file_bytes)
 
-            print('File copied successfully.')
+            logger.info('File copied successfully.')
 
         except ApiException as e:
-            print('Exception when copying file to the pod: {0} \n'.format(e))
+            logger.error(f'Exception when copying file to the pod: {str(e)}')
         except Exception as e:
-            print('Error copying file: {0} \n'.format(e))
+            logger.error(f'Error copying file: {str(e)}')
 
     def delete(self, request, namespace, port):
         load_kubernetes_config()
@@ -560,66 +595,88 @@ class PodDeleteViewURL(APIView):
         
         # Validate the port input
         if not port_pattern.match(port):
+            logger.warning(f"Invalid port value received: {port}")
             return Response({'message': 'Invalid port value'}, status=status.HTTP_400_BAD_REQUEST)
+        
         video_bytes = None
         record_video = False
         try:
-             # Example usage:
-            destination_path = "/tmp/node-" + port + "-video.mp4"  # Local path where the video will be copied
-            container_name = "node-"+ port + "-video"
-            pods = get_pods_by_app_label("node-" + port, namespace)
+            # Example usage:
+            destination_path = f"/tmp/node-{port}-video.mp4"  # Local path where the video will be copied
+            container_name = f"node-{port}-video"
+            pods = get_pods_by_app_label(f"node-{port}", namespace)
             for pod in pods:
                 for container in pod.spec.containers:
                     if container.name == f"node-{port}-video":
                         record_video = True
                         break
                 if record_video:
-                    print("Record video: on")
-                    file_name = self.get_file_name_pod_exec(pod.metadata.name, container_name, namespace, "ls /videos", core_api)
-                    print("file_name")
-                    print(file_name)
-                    src_path = f"/videos/{file_name}"  # File/folder you want to copy
-                    dest_path = f"/tmp/{file_name}"  # Destination path on which you want to copy the file/folder
-                    self.copy_file_from_pod(api_instance=core_api, pod_name=pod.metadata.name, container_name=container_name, src_path=src_path, dest_path=dest_path,
-                                        namespace=namespace)
-                    with open(f"/tmp/{file_name}", "rb") as video_file:
-                        video_bytes = video_file.read()
-                    print("Video read and saved successfully.")
-                    os.remove(f"/tmp/{file_name}")
-                print("Record video: off")
-        except:
+                    logger.info("Record video: on")
+                    try:
+                        file_name = self.get_file_name_pod_exec(pod.metadata.name, container_name, namespace, "ls /videos", core_api)
+                        logger.info(f"File name retrieved: {file_name}")
+                        src_path = f"/videos/{file_name}"  # File/folder you want to copy
+                        dest_path = f"/tmp/{file_name}"  # Destination path on which you want to copy the file/folder
+                        self.copy_file_from_pod(api_instance=core_api, pod_name=pod.metadata.name, container_name=container_name, src_path=src_path, dest_path=dest_path,
+                                            namespace=namespace)
+                        with open(dest_path, "rb") as video_file:
+                            video_bytes = video_file.read()
+                        logger.info("Video read and saved successfully.")
+                        os.remove(dest_path)
+                    except Exception as e:
+                        logger.error(f"Cannot retrieve video: {str(e)}")
+                        return Response({'message': f'Cannot retrieve video: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                logger.info("Record video: off")
+        except Exception as e:
+            logger.error(f"Error during video retrieval: {str(e)}")
             return Response({'message': f'Cannot retrieve video: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        if record_video:
-            print(type(video_bytes))
-            print(video_bytes)
+        
+        if record_video and video_bytes:
+            logger.info("Preparing video response.")
             response = HttpResponse(video_bytes, content_type='video/mp4')
             response['Content-Disposition'] = 'attachment; filename="video.mp4"'
+        else:
+            response = None
+
         try:
             # Delete matching deployments
             deployments = apps_api.list_namespaced_deployment(namespace)
             for deployment in deployments.items:
                 if f"-{port}" in deployment.metadata.name:
-                    resp = apps_api.delete_namespaced_deployment(deployment.metadata.name, namespace)
-                    pod_data["deployments"].append(deployment.metadata.name)
-                    print(resp)
-
+                    try:
+                        resp = apps_api.delete_namespaced_deployment(deployment.metadata.name, namespace)
+                        pod_data["deployments"].append(deployment.metadata.name)
+                        logger.info(f"Deployment '{deployment.metadata.name}' deleted successfully.")
+                    except ApiException as e:
+                        logger.error(f"Failed to delete deployment '{deployment.metadata.name}': {str(e)}")
+        
             # Delete matching services
             services = core_api.list_namespaced_service(namespace)
             for service in services.items:
                 if f"-{port}" in service.metadata.name:
-                    resp = core_api.delete_namespaced_service(service.metadata.name, namespace)
-                    pod_data["services"].append(service.metadata.name)
-                    print(resp)
-             # Delete matching configsMaps
+                    try:
+                        resp = core_api.delete_namespaced_service(service.metadata.name, namespace)
+                        pod_data["services"].append(service.metadata.name)
+                        logger.info(f"Service '{service.metadata.name}' deleted successfully.")
+                    except ApiException as e:
+                        logger.error(f"Failed to delete service '{service.metadata.name}': {str(e)}")
+             
+            # Delete matching configMaps
             config_maps = core_api.list_namespaced_config_map(namespace)
             for config_map in config_maps.items:
                 if f"-{port}" in config_map.metadata.name:
-                    resp = core_api.delete_namespaced_config_map(config_map.metadata.name, namespace)
-                    pod_data["config_maps"].append(config_map.metadata.name)
-                    print(resp)
-            if record_video:
+                    try:
+                        resp = core_api.delete_namespaced_config_map(config_map.metadata.name, namespace)
+                        pod_data["config_maps"].append(config_map.metadata.name)
+                        logger.info(f"ConfigMap '{config_map.metadata.name}' deleted successfully.")
+                    except ApiException as e:
+                        logger.error(f"Failed to delete ConfigMap '{config_map.metadata.name}': {str(e)}")
+            
+            if record_video and video_bytes:
                 return response
             else:
                 return Response(pod_data)
         except client.rest.ApiException as e:
+            logger.error(f"Error deleting resources: {str(e)}")
             return Response({'message': f'Error deleting: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
