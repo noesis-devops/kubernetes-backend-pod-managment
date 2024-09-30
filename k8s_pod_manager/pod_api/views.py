@@ -85,7 +85,7 @@ def get_pods_by_app_label(match_label, namespace):
 
 @csrf_exempt
 def proxy_view(request, port, subpath=''):
-    namespace = 'testingon'
+    namespace = 'ntx'
     service_name = f'selenium-hub-{port}-service'
     
     base_url = f'http://{service_name}.{namespace}.svc.cluster.local:{port}/wd/hub/session'
@@ -133,7 +133,7 @@ def proxy_view(request, port, subpath=''):
 def proxy_delete(request, namespace, port):
     v1 = client.CoreV1Api()
     service_name = f'ntx-api-kubernetes-ntx-pod-management-service' 
-    namespace = 'testingon'
+    namespace = 'ntx'
     service = v1.read_namespaced_service(name=service_name, namespace=namespace)
     logger.info(f"Fetched service '{service_name}' in namespace '{namespace}'.")
 
@@ -303,8 +303,8 @@ class PodCreateView(APIView):
        # default_se_node_session_timeout = 300  # Default timeout in seconds
        # default_selenium_node_video_image = 'ghcr.io/noesis-devops/kubernetes-backend-pod-managment/selenium/video:1.0.1'
 
-        default_selenium_hub_image = 'europe-west1-docker.pkg.dev/automation-prd-p-846221/nosartifactory/docker-hub-virtual/selenium/hub:4.11.0'
-        default_selenium_node_image = 'europe-west1-docker.pkg.dev/automation-prd-p-846221/nosartifactory/docker-hub-virtual/selenium/node-chrome:4.11.0'
+        default_selenium_hub_image = 'europe-west1-docker.pkg.dev/automation-prd-p-846221/nosartifactory/docker-hub-virtual/selenium/hub:4.1.2'
+        default_selenium_node_image = 'europe-west1-docker.pkg.dev/automation-prd-p-846221/nosartifactory/docker-hub-virtual/selenium/node-chrome:4.1.2'
         default_se_node_session_timeout = 300  # Default timeout in seconds
         default_selenium_node_video_image = 'europe-west1-docker.pkg.dev/automation-prd-p-846221/nosartifactory/docker-ntx-api-k8s-local/noesis-devops/kubernetes-backend-pod-managment/selenium-video:1.0.1'
         default_http_proxy = ''
