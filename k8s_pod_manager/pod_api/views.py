@@ -73,7 +73,7 @@ def handle_api_exception(e, resource_name):
         return False
     elif e.status == 409 and e.reason == "AlreadyExists":
         print(f"{resource_name} already exists.")
-        return True
+        return False
     else:
         print(f"An error occurred creating {resource_name}:", e)
         return False
