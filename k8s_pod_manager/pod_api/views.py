@@ -96,7 +96,7 @@ def get_pods_by_app_label(match_label, namespace):
 
 @csrf_exempt
 def proxy_view(request, port, subpath=''):
-    namespace = 'ntx'
+    namespace = 'testingon'
     service_name = f'selenium-hub-{port}-service'
     
     base_url = f'http://{service_name}.{namespace}.svc.cluster.local:{port}/wd/hub/session'
@@ -144,7 +144,7 @@ def proxy_view(request, port, subpath=''):
 def proxy_delete(request, namespace, port):
     v1 = client.CoreV1Api()
     service_name = f'ntx-api-kubernetes-ntx-pod-management-service' 
-    namespace = 'ntx'
+    namespace = 'testingon'
     service = v1.read_namespaced_service(name=service_name, namespace=namespace)
     logger.info(f"Fetched service '{service_name}' in namespace '{namespace}'.")
 
