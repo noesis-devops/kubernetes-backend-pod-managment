@@ -2,6 +2,7 @@ from django.shortcuts import render
 
 # Create your views here.
 
+import uuid
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status  # Added import for status codes
@@ -375,6 +376,10 @@ class PodCreateView(APIView):
         
         succeeds = False
         api_response = None
+        
+        x = uuid.uuid4()
+        
+        custom_variables["port"] = str(x)[:8]
 
         #for port in range(start_port, end_port):
         #    custom_variables["port"] = port
