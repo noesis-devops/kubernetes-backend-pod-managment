@@ -377,7 +377,7 @@ class PodCreateView(APIView):
         succeeds = False
         api_response = None
                 
-        custom_variables["port"] = random.randint(10000,99999)
+        custom_variables["port"] = random.randint(10000,65534)
 
         #for port in range(start_port, end_port):
         #    custom_variables["port"] = port
