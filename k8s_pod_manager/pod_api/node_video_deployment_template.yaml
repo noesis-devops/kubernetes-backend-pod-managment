@@ -37,7 +37,7 @@ spec:
             - name: NO_PROXY
               value: "{{ no_proxy }}"
             - name: SE_EVENT_BUS_HOST
-              value: selenium-hub-{{ port }}-service-pub-sub
+              value: selenium-hub-32000-service-pub-sub
             - name: SE_EVENT_BUS_PUBLISH_PORT
               value: "4442"
             - name: SE_EVENT_BUS_SUBSCRIBE_PORT
@@ -51,7 +51,7 @@ spec:
           - name: UPLOAD_DESTINATION_PREFIX
             value: video_
           - name: SE_EVENT_BUS_HOST
-            value: selenium-hub-{{ port }}-service-pub-sub
+            value: selenium-hub-32000-service-pub-sub
           - name: SE_EVENT_BUS_PUBLISH_PORT
             value: "4442"
           - name: SE_EVENT_BUS_SUBSCRIBE_PORT

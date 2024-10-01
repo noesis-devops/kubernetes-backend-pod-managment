@@ -376,31 +376,31 @@ class PodCreateView(APIView):
         succeeds = False
         api_response = None
 
-        for port in range(start_port, end_port):
-            custom_variables["port"] = port
-            template_path = Path(__file__).with_name('selenium_hub_service_template.yaml')
-            rendered_selenium_hub_service_template = self.substitute_tokens_in_yaml(template_path, custom_variables)
+        #for port in range(start_port, end_port):
+        #    custom_variables["port"] = port
+        #    template_path = Path(__file__).with_name('selenium_hub_service_template.yaml')
+        #    rendered_selenium_hub_service_template = self.substitute_tokens_in_yaml(template_path, custom_variables)
             
-            service_yaml = yaml.safe_load(rendered_selenium_hub_service_template)
-            service_name = service_yaml['metadata']['name']
+        #    service_yaml = yaml.safe_load(rendered_selenium_hub_service_template)
+        #    service_name = service_yaml['metadata']['name']
             
-            try:
-                api_response = core_api.create_namespaced_service(namespace=namespace, body=service_yaml)
-                resp[namespace]["services"].append(api_response.metadata.name)
-                logger.info(f"Service {api_response.metadata.name} created successfully.")
-                succeeds = True
-                break
-            except client.exceptions.ApiException as e:
-                success = handle_api_exception(e, f"Service {service_name}")
-                if not success:
-                    logger.info(f"Skipping port {port} due to exception.")
-                    continue
-                else:
-                    succeeds = True
-                    break
-        else:
-            logger.error("Failed to create selenium hub service on any port.")
-            return Response({'message': 'Failed to create selenium hub service on any port.'}, status=500)
+        #    try:
+        #        api_response = core_api.create_namespaced_service(namespace=namespace, body=service_yaml)
+        #        resp[namespace]["services"].append(api_response.metadata.name)
+        #        logger.info(f"Service {api_response.metadata.name} created successfully.")
+        #        succeeds = True
+        #        break
+        #    except client.exceptions.ApiException as e:
+        #        success = handle_api_exception(e, f"Service {service_name}")
+        #        if not success:
+        #            logger.info(f"Skipping port {port} due to exception.")
+        #            continue
+        #        else:
+        #            succeeds = True
+        #            break
+        #else:
+        #    logger.error("Failed to create selenium hub service on any port.")
+        #    return Response({'message': 'Failed to create selenium hub service on any port.'}, status=500)
 
         if record_video:
             template_path = Path(__file__).with_name('video-cm.yaml')
@@ -434,40 +434,40 @@ class PodCreateView(APIView):
                 return Response({'message': 'Failed to create node service.'}, status=500)
 
         
-        template_path = Path(__file__).with_name('selenium_hub_service_pub_sub_template.yaml')
-        rendered_selenium_hub_service_pub_sub_template = self.substitute_tokens_in_yaml(template_path, custom_variables)
-        service_yaml = yaml.safe_load(rendered_selenium_hub_service_pub_sub_template)
-        service_name = service_yaml['metadata']['name']
-        try:
-            api_response = core_api.create_namespaced_service(namespace=namespace, body=service_yaml)
-            resp[namespace]["services"].append(api_response.metadata.name)
-            logger.info(f"Service {api_response.metadata.name} created successfully.")
-            succeeds = True
-        except client.exceptions.ApiException as e:
-            success = handle_api_exception(e, f"Service {service_name}")
-            if not success:
-                delete_objects(apps_api, core_api, resp, namespace)
-                return Response({'message': 'Failed to create selenium hub service pub sub.'}, status=500)
+        #template_path = Path(__file__).with_name('selenium_hub_service_pub_sub_template.yaml')
+        #rendered_selenium_hub_service_pub_sub_template = self.substitute_tokens_in_yaml(template_path, custom_variables)
+        #service_yaml = yaml.safe_load(rendered_selenium_hub_service_pub_sub_template)
+        #service_name = service_yaml['metadata']['name']
+        #try:
+        #    api_response = core_api.create_namespaced_service(namespace=namespace, body=service_yaml)
+        #    resp[namespace]["services"].append(api_response.metadata.name)
+        #    logger.info(f"Service {api_response.metadata.name} created successfully.")
+        #    succeeds = True
+        #except client.exceptions.ApiException as e:
+        #    success = handle_api_exception(e, f"Service {service_name}")
+        #    if not success:
+        #        delete_objects(apps_api, core_api, resp, namespace)
+        #        return Response({'message': 'Failed to create selenium hub service pub sub.'}, status=500)
 
-        try:
-            template_path = Path(__file__).with_name('selenium_hub_deployment_template.yaml')
-            rendered_selenium_hub_deployment_template = self.substitute_tokens_in_yaml(template_path, custom_variables)
-            deployment_yaml = yaml.safe_load(rendered_selenium_hub_deployment_template)
-            deployment_name = deployment_yaml['metadata']['name']
-            api_response = apps_api.create_namespaced_deployment(namespace, deployment_yaml)
-            resp[namespace]["deployments"].append(api_response.metadata.name)
-            logger.info(f"Deployment {api_response.metadata.name} created successfully.")
+        #try:
+        #    template_path = Path(__file__).with_name('selenium_hub_deployment_template.yaml')
+        #    rendered_selenium_hub_deployment_template = self.substitute_tokens_in_yaml(template_path, custom_variables)
+        #    deployment_yaml = yaml.safe_load(rendered_selenium_hub_deployment_template)
+        #    deployment_name = deployment_yaml['metadata']['name']
+        #    api_response = apps_api.create_namespaced_deployment(namespace, deployment_yaml)
+        #    resp[namespace]["deployments"].append(api_response.metadata.name)
+        #    logger.info(f"Deployment {api_response.metadata.name} created successfully.")
 
-            ready = wait_for_deployment_ready(apps_api, namespace, api_response.metadata.name, timeout_seconds=create_timeout)
-            if not ready:
-                succeeds = False
-            else:
-                succeeds = True
-        except client.exceptions.ApiException as e:
-            success = handle_api_exception(e, f"Deployment {deployment_yaml['metadata']['name']}")
-            if not success:
-                delete_objects(apps_api, core_api, resp, namespace)
-                return Response({'message': 'Failed to create selenium hub deployment.'}, status=500)
+        #    ready = wait_for_deployment_ready(apps_api, namespace, api_response.metadata.name, timeout_seconds=create_timeout)
+        #    if not ready:
+        #        succeeds = False
+        #    else:
+        #        succeeds = True
+        #except client.exceptions.ApiException as e:
+        #    success = handle_api_exception(e, f"Deployment {deployment_yaml['metadata']['name']}")
+        #    if not success:
+        #        delete_objects(apps_api, core_api, resp, namespace)
+        #        return Response({'message': 'Failed to create selenium hub deployment.'}, status=500)
 
         try:
             if record_video:
