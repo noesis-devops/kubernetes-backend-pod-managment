@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import proxy_view, proxy_delete, update_load_balancer_ip, health_check
+from .views import proxy_view, proxy_delete, health_check
 
 urlpatterns = [
    
