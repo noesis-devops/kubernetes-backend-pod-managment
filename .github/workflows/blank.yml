@@ -1,80 +1,45 @@
-# This is a basic workflow to help you get started with Actions
-
 name: CI
 
-# Controls when the workflow will run
 on:
   workflow_dispatch:
-  # Triggers the workflow on push or pull request events but only for the "main" branch
   push:
-    branches: [ "main", "record_video", "manifests"]
-  #pull_request:
-  #  branches: [ "feature-*" ]
+    branches:
+      - "v0.0.2-KEDA"
 
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
   IMAGE_VIDEO_NAME: selenium/video
 
-
-# A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  #sonarqube-analysis:
-  #  runs-on: "10.255.0.154"
-  #  steps:
-  #    - uses: actions/checkout@v2
-  #      with:
-  #        fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
-  #    - uses: sonarsource/sonarqube-scan-action@master
-  #      env:
-  #        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-  #        SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
-
-
-      # If you wish to fail your job when the Quality Gate is red, uncomment the
-      # following lines. This would typically be used to fail a deployment.
-      # - uses: sonarsource/sonarqube-quality-gate-action@master
-      #   timeout-minutes: 5
-      #   env:
-      #     SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
   build:
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
     steps:
-      -
-        name: Checkout
+      - name: Checkout
         uses: actions/checkout@v3
+      
       - name: Log in to the Container registry
-        uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
+        uses: docker/login-action@v2
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Extract metadata (tags, labels) for Docker
         id: meta
-        uses: docker/metadata-action@9ec57ed1fcdbf14dcef7dfbe97b2010124a938b7
+        uses: docker/metadata-action@v4
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-      #-
-      #  name: Build and push video image
-      #  uses: docker/build-push-action@v4
-      #  with:
-      #    context: ./video
-      #    file: ./video/Dockerfile
-      #    push: true
-      #    tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/${{ env.IMAGE_VIDEO_NAME }}:1.0.1
-      #    labels: ${{ steps.meta.outputs.labels }}
+
       - name: Build and push API image
         uses: docker/build-push-action@v4
         with:
           context: .
           file: ./k8s_pod_manager/Dockerfile
           push: true
-          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:2.1.8
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:2.2.0
         env:
           KUBECONFIG: ${{ secrets.KUBECONFIG }}
-  #deployment:
-  #  runs-on: ubuntu-latest
-  #  environment: DEV
