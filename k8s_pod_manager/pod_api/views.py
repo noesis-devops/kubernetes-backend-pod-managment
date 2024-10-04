@@ -20,7 +20,7 @@ def load_kubernetes_config():
 @csrf_exempt
 def proxy_view(request, subpath=''):
     namespace = 'testingon'
-    service_name = f'selenium-hub-32000-service'
+    service_name = f'selenium-hub-service'
     
     base_url = f'http://{service_name}.{namespace}.svc.cluster.local:32000/graphql'
     logger.info(f"Base URL: {base_url}")
