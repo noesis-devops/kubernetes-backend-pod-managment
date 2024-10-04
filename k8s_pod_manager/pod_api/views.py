@@ -22,7 +22,7 @@ def proxy_view(request, subpath=''):
     namespace = 'testingon'
     service_name = f'selenium-hub-service'
     
-    base_url = f'http://{service_name}.{namespace}.svc.cluster.local:32000/status'
+    base_url = f'http://{service_name}.{namespace}.svc.cluster.local:32000/wd/hub/session'
     logger.info(f"Base URL: {base_url}")
     
     if subpath.startswith('/'):
