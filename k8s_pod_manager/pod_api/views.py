@@ -11,9 +11,13 @@ def load_kubernetes_config():
     try:
         config.load_incluster_config()
         logger.info("Running inside the cluster, using in-cluster configuration")
-    except Exception:
+    except Exception as e:
+        logger.warning(f"Failed to load in-cluster config: {str(e)}. Falling back to kubeconfig.")
         config.load_kube_config()
         logger.info("Running outside the cluster, using kubeconfig")
+
+
+load_kubernetes_config()
 
 def ensure_selenium_hub(namespace, selenium_hub_image):
     apps_api = client.AppsV1Api()
@@ -71,8 +75,12 @@ def ensure_selenium_hub(namespace, selenium_hub_image):
                     }
                 }
             }
-            apps_api.create_namespaced_deployment(namespace=namespace, body=deployment)
-            logger.info(f"Selenium Hub deployment '{deployment_name}' created successfully.")
+            try:
+                apps_api.create_namespaced_deployment(namespace=namespace, body=deployment)
+                logger.info(f"Selenium Hub deployment '{deployment_name}' created successfully.")
+            except ApiException as create_e:
+                logger.error(f"Failed to create Selenium Hub deployment: {str(create_e)}")
+                raise
         else:
             logger.error(f"Error ensuring Selenium Hub deployment: {str(e)}")
             raise
@@ -155,8 +163,12 @@ def create_selenium_node_deployment(namespace, selenium_node_image, selenium_nod
                     'name': 'video-scripts',
                     'configMap': {'name': 'selenium-video'}
                 })
-            apps_api.create_namespaced_deployment(namespace=namespace, body=deployment)
-            logger.info(f"Selenium Node deployment '{deployment_name}' created successfully.")
+            try:
+                apps_api.create_namespaced_deployment(namespace=namespace, body=deployment)
+                logger.info(f"Selenium Node deployment '{deployment_name}' created successfully.")
+            except ApiException as create_e:
+                logger.error(f"Failed to create Selenium Node deployment: {str(create_e)}")
+                raise
         else:
             logger.error(f"Error ensuring Selenium Node deployment: {str(e)}")
             raise
@@ -190,7 +202,7 @@ def stream_video_from_pod(api_instance, pod_name, container_name, namespace, fil
 def get_pod_for_session(selenium_hub_url, session_id):
     try:
         query = {"query": "{ sessionsInfo { sessions { sessionId nodeId } } }"}
-        response = requests.post(f"{selenium_hub_url}", json=query)
+        response = requests.post(f"{selenium_hub_url}", json=query, timeout=10)  # Added timeout
         response.raise_for_status()
         data = response.json()
         sessions = data.get("data", {}).get("sessionsInfo", {}).get("sessions", [])
@@ -198,7 +210,7 @@ def get_pod_for_session(selenium_hub_url, session_id):
             if session.get("sessionId") == session_id:
                 node_id = session.get("nodeId")
                 query_node = {"query": "{ nodes { id uri } }"}
-                response_node = requests.post(f"{selenium_hub_url}", json=query_node)
+                response_node = requests.post(f"{selenium_hub_url}", json=query_node, timeout=10)  # Added timeout
                 response_node.raise_for_status()
                 nodes_data = response_node.json()
                 for node in nodes_data.get("data", {}).get("nodes", []):
@@ -224,18 +236,10 @@ def proxy_view(request, subpath=''):
         data = request.body if request.method in ['POST', 'PUT', 'PATCH'] else None
         if request.method == 'POST' and (subpath == 'session' or subpath.startswith('session')):
             payload = json.loads(data)
-            capabilities = payload.get('capabilities', {})
-            always_match = capabilities.get('alwaysMatch', {})
             record_video = payload.get('record_video', False)
-            if record_video:
-                always_match['recordVideo'] = True
-            else:
-                always_match['recordVideo'] = False
-            capabilities['alwaysMatch'] = always_match
-            payload['capabilities'] = capabilities
+            selenium_node_video_image = payload.get('selenium-node-video-image', 'ghcr.io/noesis-devops/kubernetes-backend-pod-managment/selenium/video:1.0.1') if record_video else None
             selenium_hub_image = payload.get('selenium-hub-image', 'selenium/hub:4.11.0')
             selenium_node_image = payload.get('selenium-node-image', 'selenium/node-chrome:4.11.0')
-            selenium_node_video_image = payload.get('selenium-node-video-image', 'ghcr.io/noesis-devops/kubernetes-backend-pod-managment/selenium/video:1.0.1') if record_video else None
             ensure_selenium_hub(namespace, selenium_hub_image)
             create_selenium_node_deployment(namespace, selenium_node_image, selenium_node_video_image)
             data = json.dumps(payload)
@@ -245,7 +249,8 @@ def proxy_view(request, subpath=''):
             url=selenium_grid_url,
             headers=headers,
             data=data,
-            params=request.GET
+            params=request.GET,
+            timeout=30
         )
         if request.method == 'POST' and (subpath == 'session' or subpath.startswith('session')):
             if response.status_code in [200, 201]:
@@ -314,4 +319,5 @@ def proxy_view(request, subpath=''):
             content_type=response.headers.get('Content-Type')
         )
     except Exception as e:
-        logger.error(f"Error streaming video: {str(e)}")
+        logger.error(f"Unhandled exception in proxy_view: {str(e)}")
+        return JsonResponse({"error": f"Unhandled exception: {str(e)}"}, status=500)
