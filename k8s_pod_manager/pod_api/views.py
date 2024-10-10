@@ -56,7 +56,7 @@ def ensure_selenium_hub(namespace, selenium_hub_image):
                                     'httpGet': {'path': '/readyz', 'port': 4444},
                                     'initialDelaySeconds': 10,
                                     'periodSeconds': 10,
-                                    'timeoutSeconds': 10,
+                                    'timeoutSeconds': 60,
                                     'successThreshold': 1,
                                     'failureThreshold': 10
                                 },
@@ -64,7 +64,7 @@ def ensure_selenium_hub(namespace, selenium_hub_image):
                                     'httpGet': {'path': '/readyz', 'port': 4444},
                                     'initialDelaySeconds': 12,
                                     'periodSeconds': 10,
-                                    'timeoutSeconds': 10,
+                                    'timeoutSeconds': 60,
                                     'successThreshold': 1,
                                     'failureThreshold': 10
                                 },
@@ -243,8 +243,8 @@ def proxy_view(request, subpath=''):
             payload = json.loads(data)
             record_video = payload.get('record_video', False)
             selenium_node_video_image = payload.get('selenium-node-video-image', 'ghcr.io/noesis-devops/kubernetes-backend-pod-managment/selenium/video:1.0.1') if record_video else None
-            selenium_hub_image = payload.get('selenium-hub-image', 'selenium/hub:4.11.0')
-            selenium_node_image = payload.get('selenium-node-image', 'selenium/node-chrome:4.11.0')
+            selenium_hub_image = payload.get('selenium-hub-image', 'selenium/hub:4.1.2')
+            selenium_node_image = payload.get('selenium-node-image', 'selenium/node-chrome:4.1.2')
             ensure_selenium_hub(namespace, selenium_hub_image)
             create_selenium_node_deployment(namespace, selenium_node_image, selenium_node_video_image)
             data = json.dumps(payload)
@@ -254,8 +254,7 @@ def proxy_view(request, subpath=''):
             url=selenium_grid_url,
             headers=headers,
             data=data,
-            params=request.GET,
-            timeout=300
+            params=request.GET
         )
         if request.method == 'POST' and (subpath == 'session' or subpath.startswith('session')):
             if response.status_code in [200, 201]:
