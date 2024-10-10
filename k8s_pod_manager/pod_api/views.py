@@ -255,7 +255,7 @@ def proxy_view(request, subpath=''):
             headers=headers,
             data=data,
             params=request.GET,
-            timeout=30
+            timeout=300
         )
         if request.method == 'POST' and (subpath == 'session' or subpath.startswith('session')):
             if response.status_code in [200, 201]:
