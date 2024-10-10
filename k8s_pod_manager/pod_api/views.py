@@ -17,10 +17,11 @@ def load_kubernetes_config():
         logger.info("Running outside the cluster, using kubeconfig")
 
 
-load_kubernetes_config()
+
 
 def ensure_selenium_hub(namespace, selenium_hub_image):
     apps_api = client.AppsV1Api()
+    load_kubernetes_config()
     deployment_name = 'selenium-hub'
     try:
         deployment = apps_api.read_namespaced_deployment(deployment_name, namespace)
@@ -87,6 +88,7 @@ def ensure_selenium_hub(namespace, selenium_hub_image):
 
 def create_selenium_node_deployment(namespace, selenium_node_image, selenium_node_video_image=None):
     apps_api = client.AppsV1Api()
+    load_kubernetes_config()
     deployment_name = 'selenium-chrome-node'
     try:
         deployment = apps_api.read_namespaced_deployment(deployment_name, namespace)
@@ -174,6 +176,7 @@ def create_selenium_node_deployment(namespace, selenium_node_image, selenium_nod
             raise
 
 def stream_video_from_pod(api_instance, pod_name, container_name, namespace, file_path):
+    load_kubernetes_config()
     exec_command = ['cat', file_path]
     try:
         resp = stream(api_instance.connect_get_namespaced_pod_exec,
@@ -200,6 +203,7 @@ def stream_video_from_pod(api_instance, pod_name, container_name, namespace, fil
     return file_stream_generator
 
 def get_pod_for_session(selenium_hub_url, session_id):
+    load_kubernetes_config()
     try:
         query = {"query": "{ sessionsInfo { sessions { sessionId nodeId } } }"}
         response = requests.post(f"{selenium_hub_url}", json=query, timeout=10)  # Added timeout
@@ -225,6 +229,7 @@ def get_pod_for_session(selenium_hub_url, session_id):
 def proxy_view(request, subpath=''):
     namespace = 'testingon'
     service_name = 'selenium-hub-service'
+    load_kubernetes_config()
     base_url = f'http://{service_name}.{namespace}.svc.cluster.local:32000/wd/hub/session'
     logger.info(f"Base URL: {base_url}")
     if subpath.startswith('/'):
