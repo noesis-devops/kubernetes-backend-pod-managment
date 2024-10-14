@@ -40,6 +40,6 @@ jobs:
           context: .
           file: ./k8s_pod_manager/Dockerfile
           push: true
-          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:2.3.6
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:2.3.7
         env:
           KUBECONFIG: ${{ secrets.KUBECONFIG }}

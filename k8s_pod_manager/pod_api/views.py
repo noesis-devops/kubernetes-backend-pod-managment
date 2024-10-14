@@ -18,7 +18,7 @@ def load_kubernetes_config():
         logger.info("Running outside the cluster, using kubeconfig")
 
 @csrf_exempt
-def proxy_view(request, port, subpath=''):
+def proxy_view(request, subpath=''):
     namespace = 'testingon'
     service_name = 'selenium-hub-service'
     load_kubernetes_config()
