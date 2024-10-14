@@ -17,8 +17,6 @@ def load_kubernetes_config():
         logger.info("Running outside the cluster, using kubeconfig")
 
 
-
-
 def ensure_selenium_hub(namespace, selenium_hub_image):
     apps_api = client.AppsV1Api()
     load_kubernetes_config()
@@ -86,6 +84,7 @@ def ensure_selenium_hub(namespace, selenium_hub_image):
             logger.error(f"Error ensuring Selenium Hub deployment: {str(e)}")
             raise
 
+
 def create_selenium_node_deployment(namespace, selenium_node_image, selenium_node_video_image=None):
     apps_api = client.AppsV1Api()
     load_kubernetes_config()
@@ -120,28 +119,6 @@ def create_selenium_node_deployment(namespace, selenium_node_image, selenium_nod
                     'requests': {'cpu': '0.5', 'memory': '1Gi'}
                 }
             }]
-            if selenium_node_video_image:
-                containers.append({
-                    'name': 'selenium-chrome-node-video',
-                    'image': selenium_node_video_image,
-                    'imagePullPolicy': 'IfNotPresent',
-                    'env': [
-                        {'name': 'UPLOAD_DESTINATION_PREFIX', 'value': 'video_'},
-                        {'name': 'SE_EVENT_BUS_HOST', 'value': 'selenium-hub-service'},
-                        {'name': 'SE_EVENT_BUS_PUBLISH_PORT', 'value': '4442'},
-                        {'name': 'SE_EVENT_BUS_SUBSCRIBE_PORT', 'value': '4443'},
-                        {'name': 'SE_NODE_SESSION_TIMEOUT', 'value': '60'}
-                    ],
-                    'ports': [{'containerPort': 5666, 'protocol': 'TCP'}],
-                    'volumeMounts': [
-                        {'name': 'dshm', 'mountPath': '/dev/shm'},
-                        {'name': 'video-scripts', 'mountPath': '/opt/bin/video.sh', 'subPath': 'video.sh'}
-                    ],
-                    'resources': {
-                        'limits': {'cpu': '0.5', 'memory': '1Gi'},
-                        'requests': {'cpu': '0.5', 'memory': '1Gi'}
-                    }
-                })
             deployment = {
                 'apiVersion': 'apps/v1',
                 'kind': 'Deployment',
@@ -160,11 +137,6 @@ def create_selenium_node_deployment(namespace, selenium_node_image, selenium_nod
                     }
                 }
             }
-            if selenium_node_video_image:
-                deployment['spec']['template']['spec']['volumes'].append({
-                    'name': 'video-scripts',
-                    'configMap': {'name': 'selenium-video'}
-                })
             try:
                 apps_api.create_namespaced_deployment(namespace=namespace, body=deployment)
                 logger.info(f"Selenium Node deployment '{deployment_name}' created successfully.")
@@ -175,55 +147,6 @@ def create_selenium_node_deployment(namespace, selenium_node_image, selenium_nod
             logger.error(f"Error ensuring Selenium Node deployment: {str(e)}")
             raise
 
-def stream_video_from_pod(api_instance, pod_name, container_name, namespace, file_path):
-    load_kubernetes_config()
-    exec_command = ['cat', file_path]
-    try:
-        resp = stream(api_instance.connect_get_namespaced_pod_exec,
-                      pod_name,
-                      namespace,
-                      command=exec_command,
-                      container=container_name,
-                      stderr=True, stdin=False,
-                      stdout=True, tty=False,
-                      _preload_content=False)
-    except ApiException as e:
-        logger.error(f"Error executing command in pod '{pod_name}': {str(e)}")
-        raise
-
-    def file_stream_generator():
-        while resp.is_open():
-            resp.update(timeout=1)
-            if resp.peek_stdout():
-                yield resp.read_stdout()
-            if resp.peek_stderr():
-                logger.error(f"Error streaming video from pod: {resp.read_stderr()}")
-        resp.close()
-
-    return file_stream_generator
-
-def get_pod_for_session(selenium_hub_url, session_id):
-    load_kubernetes_config()
-    try:
-        query = {"query": "{ sessionsInfo { sessions { sessionId nodeId } } }"}
-        response = requests.post(f"{selenium_hub_url}", json=query, timeout=10)
-        response.raise_for_status()
-        data = response.json()
-        sessions = data.get("data", {}).get("sessionsInfo", {}).get("sessions", [])
-        for session in sessions:
-            if session.get("sessionId") == session_id:
-                node_id = session.get("nodeId")
-                query_node = {"query": "{ nodes { id uri } }"}
-                response_node = requests.post(f"{selenium_hub_url}", json=query_node, timeout=10)
-                response_node.raise_for_status()
-                nodes_data = response_node.json()
-                for node in nodes_data.get("data", {}).get("nodes", []):
-                    if node.get("id") == node_id:
-                        return node.get("uri")
-        return None
-    except Exception as e:
-        logger.error(f"Error querying Selenium Hub: {str(e)}")
-        return None
 
 @csrf_exempt
 def proxy_view(request, subpath=''):
@@ -239,15 +162,18 @@ def proxy_view(request, subpath=''):
         excluded_headers = ['host', 'content-length', 'transfer-encoding', 'connection']
         headers = {key: value for key, value in request.headers.items() if key.lower() not in excluded_headers}
         data = request.body if request.method in ['POST', 'PUT', 'PATCH'] else None
+
         if request.method == 'POST' and (subpath == 'session' or subpath.startswith('session')):
             payload = json.loads(data)
-            record_video = False
-            selenium_node_video_image = None
+            # Force record_video to be False by removing related variables
+            # record_video = False  # No longer needed
+            # selenium_node_video_image = None  # No longer needed
             selenium_hub_image = payload.get('selenium-hub-image', 'selenium/hub:4.1.2')
             selenium_node_image = payload.get('selenium-node-image', 'selenium/node-chrome:4.1.2')
             ensure_selenium_hub(namespace, selenium_hub_image)
-            create_selenium_node_deployment(namespace, selenium_node_image, selenium_node_video_image)
+            create_selenium_node_deployment(namespace, selenium_node_image)
             data = json.dumps(payload)
+
         logger.info(f"Proxying {request.method} request to {selenium_grid_url}")
         response = requests.request(
             method=request.method,
@@ -256,67 +182,8 @@ def proxy_view(request, subpath=''):
             data=data,
             params=request.GET
         )
-        if request.method == 'POST' and (subpath == 'session' or subpath.startswith('session')):
-            if response.status_code in [200, 201]:
-                response_json = response.json()
-                session_id = response_json.get('sessionId')
-                if not session_id:
-                    logger.error("Session ID not found in the response.")
-                    return JsonResponse({'error': 'Session ID not found in the response.'}, status=500)
-                if record_video:
-                    logger.info(f"Recording video for session {session_id}. Monitoring session status...")
-                    poll_interval = 5
-                    max_wait_time = 300
-                    elapsed_time = 0
-                    selenium_hub_url = f'http://{service_name}.{namespace}.svc.cluster.local:32000/graphql'
-                    while elapsed_time < max_wait_time:
-                        pod_uri = get_pod_for_session(selenium_hub_url, session_id)
-                        if not pod_uri:
-                            logger.info(f"Session {session_id} has completed.")
-                            break
-                        logger.info(f"Session {session_id} is still running. Waiting...")
-                        time.sleep(poll_interval)
-                        elapsed_time += poll_interval
-                    if elapsed_time >= max_wait_time:
-                        logger.error(f"Timeout while waiting for session {session_id} to complete.")
-                        return JsonResponse({'error': 'Timeout while waiting for session to complete.'}, status=504)
-                    pod_uri = get_pod_for_session(selenium_hub_url, session_id)
-                    if not pod_uri:
-                        logger.error(f"Session {session_id} has completed but pod URI not found.")
-                        return JsonResponse({'error': 'Pod URI not found after session completion.'}, status=500)
-                    try:
-                        pod_ip = pod_uri.split("http://")[1].split(":")[0]
-                    except IndexError:
-                        logger.error(f"Invalid pod URI format: {pod_uri}")
-                        return JsonResponse({"error": "Invalid pod URI format"}, status=500)
-                    core_api = client.CoreV1Api()
-                    try:
-                        pods = core_api.list_namespaced_pod(namespace=namespace).items
-                        pod = next((p for p in pods if p.status.pod_ip == pod_ip), None)
-                    except ApiException as e:
-                        logger.error(f"Error listing pods: {str(e)}")
-                        return JsonResponse({"error": "Error listing pods"}, status=500)
-                    if pod is None:
-                        logger.error(f"Pod with IP {pod_ip} not found.")
-                        return JsonResponse({"error": "Pod not found"}, status=404)
-                    video_container = None
-                    for container in pod.spec.containers:
-                        if 'video' in container.name.lower():
-                            video_container = container
-                            break
-                    if not video_container:
-                        logger.error(f"Video container not found in pod {pod.metadata.name}.")
-                        return JsonResponse({"error": "Video recording not enabled for this session."}, status=400)
-                    file_path = f"/videos/{session_id}.mp4"
-                    try:
-                        video_stream = stream_video_from_pod(core_api, pod.metadata.name, video_container.name, namespace, file_path)
-                        video_response = StreamingHttpResponse(video_stream(), content_type='video/mp4')
-                        video_response['Content-Disposition'] = f'attachment; filename="{session_id}.mp4"'
-                        logger.info(f"Video for session {session_id} retrieved successfully.")
-                        return video_response
-                    except Exception as e:
-                        logger.error(f"Error streaming video: {str(e)}")
-                        return JsonResponse({"error": f"Error streaming video: {str(e)}"}, status=500)
+
+
         return HttpResponse(
             content=response.content,
             status=response.status_code,
