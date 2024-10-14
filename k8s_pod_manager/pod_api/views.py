@@ -206,7 +206,7 @@ def get_pod_for_session(selenium_hub_url, session_id):
     load_kubernetes_config()
     try:
         query = {"query": "{ sessionsInfo { sessions { sessionId nodeId } } }"}
-        response = requests.post(f"{selenium_hub_url}", json=query, timeout=10)  # Added timeout
+        response = requests.post(f"{selenium_hub_url}", json=query, timeout=10)
         response.raise_for_status()
         data = response.json()
         sessions = data.get("data", {}).get("sessionsInfo", {}).get("sessions", [])
@@ -214,7 +214,7 @@ def get_pod_for_session(selenium_hub_url, session_id):
             if session.get("sessionId") == session_id:
                 node_id = session.get("nodeId")
                 query_node = {"query": "{ nodes { id uri } }"}
-                response_node = requests.post(f"{selenium_hub_url}", json=query_node, timeout=10)  # Added timeout
+                response_node = requests.post(f"{selenium_hub_url}", json=query_node, timeout=10)
                 response_node.raise_for_status()
                 nodes_data = response_node.json()
                 for node in nodes_data.get("data", {}).get("nodes", []):
@@ -241,8 +241,8 @@ def proxy_view(request, subpath=''):
         data = request.body if request.method in ['POST', 'PUT', 'PATCH'] else None
         if request.method == 'POST' and (subpath == 'session' or subpath.startswith('session')):
             payload = json.loads(data)
-            record_video = payload.get('record_video', False)
-            selenium_node_video_image = payload.get('selenium-node-video-image', 'ghcr.io/noesis-devops/kubernetes-backend-pod-managment/selenium/video:1.0.1') if record_video else None
+            record_video = False
+            selenium_node_video_image = None
             selenium_hub_image = payload.get('selenium-hub-image', 'selenium/hub:4.1.2')
             selenium_node_image = payload.get('selenium-node-image', 'selenium/node-chrome:4.1.2')
             ensure_selenium_hub(namespace, selenium_hub_image)
