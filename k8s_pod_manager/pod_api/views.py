@@ -19,7 +19,7 @@ def load_kubernetes_config():
 
 @csrf_exempt
 def proxy_view(request, subpath=''):
-    namespace = 'ntx'
+    namespace = 'testingon'
     service_name = 'selenium-hub-service'
     #load_kubernetes_config()
     base_url = f'http://{service_name}.{namespace}.svc.cluster.local:32000/wd/hub/session'
@@ -57,7 +57,7 @@ def proxy_view(request, subpath=''):
 def proxy_delete(request, namespace, port):
     v1 = client.CoreV1Api()
     service_name = f'ntx-api-kubernetes-ntx-pod-management-service'
-    namespace = 'ntx'
+    namespace = 'testingon'
 
     try:
         service = v1.read_namespaced_service(name=service_name, namespace=namespace)
@@ -111,7 +111,7 @@ def proxy_delete(request, namespace, port):
 
 
 def health_check(request):
-    selenium_hub_url = 'http://selenium-hub-service.ntx.svc.cluster.local:4444/status'
+    selenium_hub_url = 'http://selenium-hub-service.testingon.svc.cluster.local:4444/status'
     try:
         response = requests.get(selenium_hub_url)
         if response.status_code == 200:
