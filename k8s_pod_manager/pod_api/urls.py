@@ -8,6 +8,9 @@ urlpatterns = [
     
     path('proxy/session', proxy_view, name='proxy_session_no_subpath'),
     path('proxy/session/<path:subpath>', proxy_view, name='proxy_session'),
+    
+    path('proxy', proxy_view, name='proxy_session_no_subpath'),
+    path('proxy/<path:subpath>', proxy_view, name='proxy_session'),
 
     path('proxy/delete/<str:namespace>/<int:port>/', proxy_delete, name='proxy_delete'),
 
